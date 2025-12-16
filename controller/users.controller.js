@@ -31,10 +31,10 @@ const register = asyncWrapper(async (req, res, next) => {
         email: req.body.email,
         password: hashedPassword,
         role:req.body.role,
-        avatar:req.file.filename
+        // avatar:req.file.filename 
     })
-    const token = generateTokens({firstName:newUser.firstName, lastName:newUser.lastName, email:newUser.email, id:newUser._id,role:newUser.role})
-    newUser.token = token
+    // const token = generateTokens({firstName:newUser.firstName, lastName:newUser.lastName, email:newUser.email, id:newUser._id,role:newUser.role})
+    // newUser.token = token
     await newUser.save()
     res.status(201).json({ status: SUCCESS, data: { user:newUser } });
 })
