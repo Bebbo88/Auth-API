@@ -33,6 +33,7 @@ const register = asyncWrapper(async (req, res, next) => {
   if (!validator.isStrongPassword(req.body.password)) {
     return next(appErrors.create("Weak password", 400, FAIL));
   }
+
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
   const newUser = await User({
     firstName: req.body.firstName,
@@ -51,8 +52,12 @@ const register = asyncWrapper(async (req, res, next) => {
   newUser.emailVerificationExpires = Date.now() + 60 * 60 * 1000;
 
   await newUser.save();
+  res.status(201).json({
+    status: SUCCESS,
+    message: "Registered successfully. Please verify your email.",
+  });
 
-  const redirectUrl = req.body.redirectUrl;
+  const redirectUrl = req.body.redirectUrl || "http://localhost:5000";
   const verificationLink = `${redirectUrl}/api/auth/verify-email/${verificationToken}`;
 
   await transport.sendMail({
@@ -61,7 +66,6 @@ const register = asyncWrapper(async (req, res, next) => {
     subject: "Verify your email",
     text: `Click here to verify your email: ${verificationLink}`,
   });
-  res.status(201).json({ status: SUCCESS, data: { user: newUser } });
 });
 
 const login = asyncWrapper(async (req, res, next) => {
