@@ -73,31 +73,52 @@ exports.getNearbyStations = asyncHandler(async (req, res) => {
     });
   }
 
-  // تحويل القيم لـ Number
   const latitude = Number(lat);
   const longitude = Number(lng);
-  const maxDistance = Number(distance); // بالمتر
+  const maxDistance = Number(distance);
 
-  // تأكد إنك عامل index 2dsphere في StationSchema
-  const stations = await station
-    .aggregate([
-      {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude], // [lng, lat]
-          },
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: maxDistance,
+  const stations = await station.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: "Point",
+          coordinates: [longitude, latitude],
+        },
+        distanceField: "distance",
+        spherical: true,
+        maxDistance,
+      },
+    },
+    {
+      $lookup: {
+        from: "lines",
+        localField: "lines",
+        foreignField: "_id",
+        as: "lines",
+      },
+    },
+    {
+      $project: {
+        stationName: 1,
+        location: 1,
+        status: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        lines: {
+          _id: 1,
+          fromStation: 1,
+          toStation: 1,
+          price: 1,
+          distance: 1,
         },
       },
-    ])
-    .populate("lines", "fromStation toStation price distance");
+    },
+  ]);
 
   res.status(200).json({
-    status: "success",
-    results: stations.length,
+    count: stations.length,
     data: stations,
   });
 });
+
+
