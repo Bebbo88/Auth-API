@@ -51,19 +51,19 @@ const register = asyncWrapper(async (req, res, next) => {
   newUser.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
 
   await newUser.save();
-  res.status(201).json({
-    status: SUCCESS,
-    message: "Registered successfully. Please verify your email.",
-    data: {
-      user: newUser,
-    },
-  });
 
   await transport.sendMail({
     from: process.env.EMAIL,
     to: newUser.email,
     subject: "Verify your email",
     text: `Code ${verificationCode}`,
+  });
+  res.status(201).json({
+    status: SUCCESS,
+    message: "Registered successfully. Please verify your email.",
+    data: {
+      user: newUser,
+    },
   });
 });
 
