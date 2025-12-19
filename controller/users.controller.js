@@ -43,28 +43,27 @@ const register = asyncWrapper(async (req, res, next) => {
     role: req.body.role,
     avatar: req.file ? req.file.filename : undefined,
   });
-  const verificationToken = generateTokens({
-    id: newUser._id.toString(),
-    role: newUser.role,
-  });
-  const hashedVerificationToken = hashing(verificationToken);
-  newUser.emailVerificationToken = hashedVerificationToken;
-  newUser.emailVerificationExpires = Date.now() + 60 * 60 * 1000;
+
+  const verificationCode = Math.floor(100000 + Math.random() * 900000);
+  const hashedCode = hashing(verificationCode);
+
+  newUser.emailVerificationCode = hashedCode;
+  newUser.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
 
   await newUser.save();
-  res.status(201).json({
-    status: SUCCESS,
-    message: "Registered successfully. Please verify your email.",
-  });
-
-  const redirectUrl = req.body.redirectUrl || "http://localhost:5000";
-  const verificationLink = `${redirectUrl}/api/auth/verify-email/${verificationToken}`;
 
   await transport.sendMail({
     from: process.env.EMAIL,
     to: newUser.email,
     subject: "Verify your email",
-    text: `Click here to verify your email: ${verificationLink}`,
+    text: `Code ${verificationCode}`,
+  });
+  res.status(201).json({
+    status: SUCCESS,
+    message: "Registered successfully. Please verify your email.",
+    data: {
+      user: newUser,
+    },
   });
 });
 
@@ -120,12 +119,10 @@ const logout = asyncWrapper(async (req, res, next) => {
 
 // //email verification
 const verifyEmailAfterRegister = asyncWrapper(async (req, res, next) => {
-  const { token } = req.params;
-
-  const hashedToken = hashing(token);
+  const hashedCode = hashing(req.body.verificationCode);
 
   const user = await User.findOne({
-    emailVerificationToken: hashedToken,
+    emailVerificationCode: hashedCode,
     emailVerificationExpires: { $gt: Date.now() },
   });
 
@@ -134,28 +131,24 @@ const verifyEmailAfterRegister = asyncWrapper(async (req, res, next) => {
       appErrors.create("Invalid or expired verification link", 400, FAIL)
     );
   }
+  const token = generateTokens({
+    id: user._id.toString(),
+    role: user.role,
+  });
 
   user.verified = true;
-  user.emailVerificationToken = undefined;
+  user.emailVerificationCode = undefined;
   user.emailVerificationExpires = undefined;
 
   await user.save();
 
-  res
-    .cookie("Authorization", `Bearer ${token}`, {
-      httpOnly: process.env.NODE_ENV === "production",
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 60 * 1000,
-    })
-    .status(200)
-    .json({
-      status: SUCCESS,
-      data: {
-        message: "Email verified successfully. You can now login.",
-        accessToken: token,
-      },
-    });
+  res.status(200).json({
+    status: SUCCESS,
+    data: {
+      message: "Email verified successfully.",
+      accessToken: token,
+    },
+  });
 });
 
 // const sendVerificationEmail = asyncWrapper(async (req, res, next) => {

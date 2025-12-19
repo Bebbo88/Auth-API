@@ -30,10 +30,10 @@ const userSchema = new mongoose.Schema(
     },
     avatar: { type: String, default: "profile.jpg" },
 
-    // verificationCode: { type: Number, select: false },
-    // verificationCodeValidation: { type: Number, select: false },
-    emailVerificationToken: { type: String, select: false },
-    emailVerificationExpires: { type: Date, select: false },
+    emailVerificationCode: { type: String, select: false },
+    emailVerificationExpires: { type: Number, select: false },
+    // emailVerificationToken: { type: String, select: false },
+    // emailVerificationExpires: { type: Date, select: false },
 
     forgotPasswordCode: { type: String, select: false },
     forgotPasswordCodeValidation: { type: Date, select: false },
