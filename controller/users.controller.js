@@ -53,17 +53,18 @@ const register = asyncWrapper(async (req, res, next) => {
 
   await newUser.save();
 
-  // await transport.sendMail({
-  //   from: process.env.EMAIL,
-  //   to: newUser.email,
-  //   subject: "Verify your email",
-  //   text: `Code ${verificationCode}`,
-  // });
+  await transport.sendMail({
+    from: process.env.EMAIL,
+    to: newUser.email,
+    subject: "Verify your email",
+    text: `Code ${verificationCode}`,
+  });
   console.log("BEFORE SEND EMAIL");
 
-  sendOTPEmail(newUser.email, verificationCode)
-    .then(() => console.log("EMAIL SENT ✅"))
-    .catch((err) => console.error("EMAIL ERROR ❌", err));
+  // // sendOTPEmail(newUser.email, verificationCode)
+  // //   .then(() => console.log("EMAIL SENT ✅"))
+  // //   .catch((err) => console.error("EMAIL ERROR ❌", err));
+  // sendOTPEmail("mowqaf.official@gmail.com", "123456");
 
   console.log("AFTER SEND EMAIL");
 
