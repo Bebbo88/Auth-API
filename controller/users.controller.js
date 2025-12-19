@@ -8,6 +8,7 @@ const validator = require("validator");
 const transport = require("../middlewares/sendEmail");
 const crypto = require("crypto");
 const hashing = require("../utils/hashing");
+const sendOTPEmail = require("../middlewares/sendEmail");
 
 const getAllUsers = asyncWrapper(async (req, res) => {
   const limit = req.query.limit || 10;
@@ -52,12 +53,20 @@ const register = asyncWrapper(async (req, res, next) => {
 
   await newUser.save();
 
-  await transport.sendMail({
-    from: process.env.EMAIL,
-    to: newUser.email,
-    subject: "Verify your email",
-    text: `Code ${verificationCode}`,
-  });
+  // await transport.sendMail({
+  //   from: process.env.EMAIL,
+  //   to: newUser.email,
+  //   subject: "Verify your email",
+  //   text: `Code ${verificationCode}`,
+  // });
+  console.log("BEFORE SEND EMAIL");
+
+  sendOTPEmail(newUser.email, verificationCode)
+    .then(() => console.log("EMAIL SENT ✅"))
+    .catch((err) => console.error("EMAIL ERROR ❌", err));
+
+  console.log("AFTER SEND EMAIL");
+
   res.status(201).json({
     status: SUCCESS,
     message: "Registered successfully. Please verify your email.",
