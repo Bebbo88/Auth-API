@@ -48,9 +48,14 @@ exports.getAllStations = asyncHandler(async (req, res) => {
 // 📍 Get One Station
 exports.getOneStation = asyncHandler(async (req, res) => {
   const { stationId } = req.params;
-  const oneStation = await station
-    .findById(stationId)
-    .populate("lines", "fromStation toStation price distance");
+  const oneStation = await station.findById(stationId).populate({
+    path: "lines",
+    select: "fromStation toStation price distance",
+    populate: [
+      { path: "fromStation", select: "stationName" },
+      { path: "toStation", select: "stationName" },
+    ],
+  });
 
   if (!oneStation) {
     return res.status(404).json({
@@ -120,5 +125,3 @@ exports.getNearbyStations = asyncHandler(async (req, res) => {
     data: stations,
   });
 });
-
-
