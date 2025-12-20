@@ -27,10 +27,8 @@ route
     addStationsValidator,
     addStations
   )
-  .get(VerifyToken, getAllStations);
-route.route("/near").get(VerifyToken, getNearbyStations);
-route
-  .route("/:stationId")
-  .get(VerifyToken, getOneStationValidator, getOneStation);
+  .get(getAllStations);
+route.route("/near").get(getNearbyStations);
+route.route("/:stationId").get(getOneStationValidator, getOneStation);
 
 module.exports = route;

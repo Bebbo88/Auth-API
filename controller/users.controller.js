@@ -50,23 +50,22 @@ const register = asyncWrapper(async (req, res, next) => {
 
   newUser.emailVerificationCode = hashedCode;
   newUser.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
-
-  await newUser.save();
+  console.log("BEFORE SEND EMAIL");
 
   await transport.sendMail({
     from: process.env.EMAIL,
     to: newUser.email,
-    subject: "Verify your email",
-    text: `Code ${verificationCode}`,
+    subject: "Your Verification Code",
+    html: `
+      <h2>Email Verification</h2>
+      <p>Your code is:</p>
+      <h1>${verificationCode}</h1>
+      <p>Expires in 10 minutes</p>
+    `,
   });
-  console.log("BEFORE SEND EMAIL");
-
-  // // sendOTPEmail(newUser.email, verificationCode)
-  // //   .then(() => console.log("EMAIL SENT ✅"))
-  // //   .catch((err) => console.error("EMAIL ERROR ❌", err));
-  // sendOTPEmail("mowqaf.official@gmail.com", "123456");
 
   console.log("AFTER SEND EMAIL");
+  await newUser.save();
 
   res.status(201).json({
     status: SUCCESS,
@@ -277,8 +276,13 @@ const sendVerificationPassword = asyncWrapper(async (req, res, next) => {
   const mailOptions = {
     from: process.env.EMAIL,
     to: user.email,
-    subject: "Verification Code",
-    text: `Your verification code is ${verificationCode}`,
+    subject: "Your Verification Code",
+    html: `
+      <h2>Email Verification</h2>
+      <p>Your code is:</p>
+      <h1>${verificationCode}</h1>
+      <p>Expires in 10 minutes</p>
+    `,
   };
   await transport.sendMail(mailOptions);
 

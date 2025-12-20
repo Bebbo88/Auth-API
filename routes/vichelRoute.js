@@ -22,7 +22,7 @@ route
     addVichelToLineValidator,
     addVichelToLine
   )
-  .get(VerifyToken, getVichelOfLineValidator, getAllVichelOfLine);
-route.route("/:veivheId").get(VerifyToken, getVichelOfLine);
+  .get(getVichelOfLineValidator, getAllVichelOfLine);
+route.route("/:veivheId").get(getVichelOfLine);
 
 module.exports = route;

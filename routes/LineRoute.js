@@ -24,7 +24,7 @@ route
     addLineToStationValidator,
     addLineToStation
   )
-  .get(VerifyToken, getAllLineOfStationValidator, getAllLinesOfStation);
-route.route("/:lineId").get(VerifyToken, getOneLine);
+  .get(getAllLineOfStationValidator, getAllLinesOfStation);
+route.route("/:lineId").get(getOneLine);
 
 module.exports = route;
