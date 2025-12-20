@@ -50,7 +50,7 @@ router.route("/login").post(loginLimiter, login);
 router.route("/logout").post(VerifyToken, logout);
 
 //email verification
-router.get("/verify-email/:token", verifyEmailAfterRegister);
+router.route("/verify-email").post(verifyEmailAfterRegister);
 
 // router
 //   .route("/send-verification-email")
