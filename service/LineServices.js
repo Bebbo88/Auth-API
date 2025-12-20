@@ -28,32 +28,47 @@ exports.addLineToStation = asyncHandler(async (req, res, next) => {
     return next(new appErrors.create("One or both stations not found", 404));
   }
 
-  // Check if line already exists
-  const sameLine = await Line.findOne({
+  // Check if line already exists (both directions)
+  const existingLineForward = await Line.findOne({
     fromStation: from._id,
     toStation: to._id,
   });
+  const existingLineReverse = await Line.findOne({
+    fromStation: to._id,
+    toStation: from._id,
+  });
 
-  if (sameLine) {
-    return next(new appErrors.create("This Line already exists", 400));
+  if (existingLineForward || existingLineReverse) {
+    return next(
+      new appErrors.create("This Line or its reverse already exists", 400)
+    );
   }
 
-  // Create the new line
-  const lineData = await Line.create({
-    fromStation: from._id,
-    toStation: to._id,
-    price,
-    distance,
-  });
+  // Create the new lines (forward and reverse)
+  const [lineForward, lineReverse] = await Promise.all([
+    Line.create({
+      fromStation: from._id,
+      toStation: to._id,
+      price,
+      distance,
+    }),
+    Line.create({
+      fromStation: to._id,
+      toStation: from._id,
+      price,
+      distance,
+    }),
+  ]);
 
-  // Optionally: add the line reference to the fromStation lines array
-  from.lines.push(lineData._id);
-  await from.save();
+  // Add the line references to both stations
+  from.lines.push(lineForward._id);
+  to.lines.push(lineReverse._id);
+  await Promise.all([from.save(), to.save()]);
 
   return res.status(201).json({
     status: "success",
-    message: "Line created successfully",
-    data: lineData,
+    message: "Lines created successfully (both directions)",
+    data: { forward: lineForward, reverse: lineReverse },
   });
 });
 
