@@ -2,17 +2,16 @@ const express = require("express");
 const VerifyToken = require("../middlewares/verifyToken");
 const multer = require("multer");
 const {
-  getAllUsers,
   register,
   login,
   logout,
-  sendVerificationEmail,
-  verifyEmail,
+
   changePassword,
   sendVerificationPassword,
   verifyPassword,
   resetPassword,
   verifyEmailAfterRegister,
+  getUserDetails,
 } = require("../controller/users.controller");
 const appErrors = require("../utils/appErrors");
 const { FAIL } = require("../utils/httpStatusText");
@@ -42,10 +41,10 @@ const upload = multer({ storage, fileFilter });
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: "قمت بمحاولات تسجيل دخول كثيرة برجاء , المحاولة بعد 15 دقيقة",
+  message: "قمت بمحاولات تسجيل دخول كثيرة برجاء المحاولة بعد 15 دقيقة",
 });
 
-router.route("/").get(VerifyToken, getAllUsers);
+router.route("/user/:userId").get(getUserDetails);
 router.route("/register").post(upload.single("avatar"), register);
 router.route("/login").post(loginLimiter, login);
 router.route("/logout").post(VerifyToken, logout);

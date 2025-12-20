@@ -2,6 +2,7 @@ require("dotenv").config();
 const cors = require("cors");
 const usersRouter = require("./routes/users.routes");
 const routeStation = require("./routes/StationRoue");
+const communityRoutes = require("./routes/community.routes");
 const express = require("express");
 const mongoose = require("mongoose");
 const { ERROR } = require("./utils/httpStatusText");
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", usersRouter);
 app.use("/api/station", routeStation);
+app.use("/api/community", communityRoutes);
 
 mongoose.connect(process.env.MONGO_URL).then(() => {
   console.log("db started successfully");

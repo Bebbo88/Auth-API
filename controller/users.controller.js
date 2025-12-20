@@ -6,21 +6,20 @@ const bcrypt = require("bcrypt");
 const generateTokens = require("../utils/generateTokens");
 const validator = require("validator");
 const transport = require("../middlewares/sendEmail");
-const crypto = require("crypto");
 const hashing = require("../utils/hashing");
-const sendOTPEmail = require("../middlewares/sendEmail");
 
-const getAllUsers = asyncWrapper(async (req, res) => {
-  const limit = req.query.limit || 10;
-  const page = req.query.page || 1;
-  const skip = (page - 1) * limit;
-  const users = await User.find(
-    {},
-    { __v: false, password: false, token: false }
-  )
-    .limit(limit)
-    .skip(skip);
-  res.json({ status: SUCCESS, data: { users } });
+const getUserDetails = asyncWrapper(async (req, res) => {
+  const user = await User.findById(req.params.userId);
+  if (!user) {
+    return res.status(404).json({
+      status: FAIL,
+      data: {
+        message: "user not found",
+      },
+    });
+  }
+
+  res.json({ status: SUCCESS, data: { user } });
 });
 
 const register = asyncWrapper(async (req, res, next) => {
@@ -114,6 +113,7 @@ const login = asyncWrapper(async (req, res, next) => {
     .json({
       status: SUCCESS,
       data: {
+        userId: user._id,
         accessToken: token,
       },
     });
@@ -374,7 +374,7 @@ const resetPassword = asyncWrapper(async (req, res, next) => {
 });
 
 module.exports = {
-  getAllUsers,
+  getUserDetails,
   register,
   login,
   logout,
