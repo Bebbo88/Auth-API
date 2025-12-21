@@ -205,7 +205,7 @@ const getPosts = asyncHandler(async (req, res) => {
   if (req.query.category) filter.category = req.query.category;
 
   let posts = await Post.find(filter)
-    .populate("user", "_id firstName lastName avatar")
+    .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: -1 })
     .lean();
   const userId = req.currentUser._id;
