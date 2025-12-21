@@ -77,7 +77,7 @@ exports.addBulkLinesToStation = asyncHandler(async (req, res, next) => {
             distance,
           },
         ],
-        { session }
+        { session, ordered: true } // ✨ هنا
       );
 
       createdLines.push(forward, reverse);

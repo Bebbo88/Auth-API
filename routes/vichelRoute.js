@@ -2,6 +2,7 @@ const {
   addVichelToLine,
   getAllVichelOfLine,
   getVichelOfLine,
+  addBulkVichelsToLine
 } = require("../service/vichelService");
 const express = require("express");
 const {
@@ -23,6 +24,8 @@ route
     addVichelToLine
   )
   .get(getVichelOfLineValidator, getAllVichelOfLine);
+route.route("/bulk").post(addBulkVichelsToLine);
+
 route.route("/:veivheId").get(getVichelOfLine);
 
 module.exports = route;

@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const Post = require("../models/post.model");
+const Post = require("../models/post.model copy");
 const Comment = require("../models/comment.model");
 const Like = require("../models/like.model");
 const Activity = require("../models/activity.model");
@@ -48,7 +48,7 @@ const createPost = asyncHandler(async (req, res) => {
   }
 
   const post = await Post.create({
-    user: req.user._id,
+    user: req.currentUser._id,
     content,
     category,
     media,
@@ -56,7 +56,7 @@ const createPost = asyncHandler(async (req, res) => {
   });
 
   await recordActivity(
-    req.user._id,
+    req.currentUser._id,
     "POST_CREATED",
     post._id,
     "Post",
@@ -74,7 +74,7 @@ const updatePost = asyncHandler(async (req, res) => {
     throw new Error("Post not found");
   }
 
-  if (post.user.toString() !== req.user._id.toString()) {
+  if (post.user.toString() !== req.currentUser._id.toString()) {
     res.status(403);
     throw new Error("Not authorized to update this post");
   }
@@ -93,7 +93,7 @@ const updatePost = asyncHandler(async (req, res) => {
   await post.save();
 
   await recordActivity(
-    req.user._id,
+    req.currentUser._id,
     "POST_UPDATED",
     post._id,
     "Post",
@@ -106,7 +106,7 @@ const updatePost = asyncHandler(async (req, res) => {
 // ======= Like Post =======
 const likePost = asyncHandler(async (req, res) => {
   const postId = req.params.id;
-  const userId = req.user._id;
+  const userId = req.currentUser._id;
 
   const post = await Post.findById(postId);
   if (!post) {
@@ -153,14 +153,14 @@ const addComment = asyncHandler(async (req, res) => {
   }
 
   const comment = await Comment.create({
-    user: req.user._id,
+    user: req.currentUser._id,
     post: postId,
     content: req.body.content,
   });
 
   await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
   await recordActivity(
-    req.user._id,
+    req.currentUser._id,
     "COMMENT_ADDED",
     comment._id,
     "Comment",
@@ -178,7 +178,7 @@ const updateComment = asyncHandler(async (req, res) => {
     throw new Error("Comment not found");
   }
 
-  if (comment.user.toString() !== req.user._id.toString()) {
+  if (comment.user.toString() !== req.currentUser._id.toString()) {
     res.status(403);
     throw new Error("Not authorized to update this comment");
   }
@@ -189,7 +189,7 @@ const updateComment = asyncHandler(async (req, res) => {
   await comment.save();
 
   await recordActivity(
-    req.user._id,
+    req.currentUser._id,
     "COMMENT_UPDATED",
     comment._id,
     "Comment",
@@ -205,10 +205,10 @@ const getPosts = asyncHandler(async (req, res) => {
   if (req.query.category) filter.category = req.query.category;
 
   let posts = await Post.find(filter)
-    .populate("user", "name")
+    .populate("user", "_id firstName lastName avatar")
     .sort({ createdAt: -1 })
     .lean();
-  const userId = req.user._id;
+  const userId = req.currentUser._id;
   const postIds = posts.map((p) => p._id);
   const likes = await Like.find({ user: userId, post: { $in: postIds } });
   const likedPostIds = likes.map((l) => l.post.toString());
@@ -230,7 +230,7 @@ const getComments = asyncHandler(async (req, res) => {
 
 // ======= Get Activity =======
 const getActivity = asyncHandler(async (req, res) => {
-  const activity = await Activity.find({ user: req.user._id }).sort({
+  const activity = await Activity.find({ user: req.currentUser._id }).sort({
     createdAt: -1,
   });
   res.json(activity);
