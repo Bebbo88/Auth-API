@@ -236,6 +236,39 @@ const getActivity = asyncHandler(async (req, res) => {
   res.json(activity);
 });
 
+// ======= Get Posts By User Id =======
+const getPostsByUserId = asyncHandler(async (req, res) => {
+  const profileUserId = req.params.userId;
+  const currentUserId = req.currentUser._id;
+
+  let posts = await Post.find({ user: profileUserId })
+    .populate("user", "_id firstName lastName email avatar")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (!posts.length) {
+    return res.json([]);
+  }
+
+  const postIds = posts.map((p) => p._id);
+
+  const likes = await Like.find({
+    user: currentUserId,
+    post: { $in: postIds },
+  });
+
+  const likedPostIds = likes.map((l) => l.post.toString());
+
+  posts = posts.map((post) => ({
+    ...post,
+    isLiked: likedPostIds.includes(post._id.toString()),
+  }));
+
+  res.json(posts);
+
+});
+
+
 module.exports = {
   createPost,
   updatePost,
@@ -245,4 +278,5 @@ module.exports = {
   updateComment,
   getComments,
   getActivity,
+  getPostsByUserId,
 };
