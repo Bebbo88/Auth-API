@@ -223,7 +223,7 @@ const getPosts = asyncHandler(async (req, res) => {
 // ======= Get Comments =======
 const getComments = asyncHandler(async (req, res) => {
   const comments = await Comment.find({ post: req.params.id })
-    .populate("user", "name")
+    .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: 1 });
   res.json(comments);
 });
