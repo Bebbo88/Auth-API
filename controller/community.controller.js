@@ -146,6 +146,7 @@ const addComment = asyncHandler(async (req, res) => {
   }
 
   const postId = req.params.id;
+
   const post = await Post.findById(postId);
   if (!post) {
     res.status(404);
@@ -158,17 +159,23 @@ const addComment = asyncHandler(async (req, res) => {
     content: req.body.content,
   });
 
+  // 👇 populate بنفس شكل getComments
+  const populatedComment = await Comment.findById(comment._id)
+    .populate("user", "_id firstName lastName email avatar");
+
   await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+
   await recordActivity(
     req.currentUser._id,
     "COMMENT_ADDED",
-    comment._id,
+    populatedComment._id,
     "Comment",
     "Commented on a post"
   );
 
-  res.status(201).json(comment);
+  res.status(201).json(populatedComment);
 });
+
 
 // ======= Update Comment =======
 const updateComment = asyncHandler(async (req, res) => {
