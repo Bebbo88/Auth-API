@@ -12,6 +12,8 @@ const {
 } = require("../controller/community.controller");
 const VerifyToken = require("../middlewares/verifyToken");
 const multer = require("multer");
+const appErrors = require("../utils/appErrors");
+const { FAIL } = require("../utils/httpStatusText");
 
 const router = express.Router();
 
@@ -27,7 +29,7 @@ const storage = multer.diskStorage({
 });
 const fileFilter = (req, file, cb) => {
   const imgEXT = file.mimetype.split("/")[0];
-  if (imgEXT === "image") {
+  if (imgEXT === "image" || imgEXT === "video") {
     cb(null, true);
   } else {
     cb(appErrors.create("only images are allowed", 400, FAIL), false);
