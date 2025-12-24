@@ -384,5 +384,33 @@ module.exports = {
   changePassword,
   sendVerificationPassword,
   verifyPassword,
+  verifyPassword,
   resetPassword,
+  getUserBookingHistory,
+};
+
+const Booking = require("../models/booking.model"); // Ensure this is imported at top or here
+
+async function getUserBookingHistory(req, res, next) {
+  const bookings = await Booking.find({ user: req.currentUser.id })
+    // Populate vehicle (and nested line info if needed, but let's start simple)
+    .populate({
+      path: "vehicle",
+      select: "plateNumber model line",
+      populate: {
+        path: "line",
+        select: "fromStation toStation",
+        populate: [
+          { path: "fromStation", select: "stationName" },
+          { path: "toStation", select: "stationName" },
+        ]
+      }
+    })
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    status: "success",
+    results: bookings.length,
+    data: bookings,
+  });
 };

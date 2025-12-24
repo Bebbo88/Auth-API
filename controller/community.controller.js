@@ -63,9 +63,31 @@ const createPost = asyncHandler(async (req, res) => {
     "Created a new post"
   );
 
-  res.status(201).json(post);
+  const responsePost = await buildPostResponse(post._id, req.currentUser._id);
+
+  res.status(201).json(responsePost);
 });
 
+// ======= Get Posts =======
+const getPosts = asyncHandler(async (req, res) => {
+  const filter = {};
+  if (req.query.category) filter.category = req.query.category;
+
+  let posts = await Post.find(filter)
+    .populate("user", "_id firstName lastName email avatar")
+    .sort({ createdAt: -1 })
+    .lean();
+  const userId = req.currentUser._id;
+  const postIds = posts.map((p) => p._id);
+  const likes = await Like.find({ user: userId, post: { $in: postIds } });
+  const likedPostIds = likes.map((l) => l.post.toString());
+  posts = posts.map((p) => ({
+    ...p,
+    isLiked: likedPostIds.includes(p._id.toString()),
+  }));
+
+  res.json(posts);
+});
 // ======= Update Post =======
 const updatePost = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id);
@@ -146,6 +168,7 @@ const addComment = asyncHandler(async (req, res) => {
   }
 
   const postId = req.params.id;
+
   const post = await Post.findById(postId);
   if (!post) {
     res.status(404);
@@ -158,16 +181,22 @@ const addComment = asyncHandler(async (req, res) => {
     content: req.body.content,
   });
 
+  const populatedComment = await Comment.findById(comment._id).populate(
+    "user",
+    "_id firstName lastName email avatar"
+  );
+
   await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+
   await recordActivity(
     req.currentUser._id,
     "COMMENT_ADDED",
-    comment._id,
+    populatedComment._id,
     "Comment",
     "Commented on a post"
   );
 
-  res.status(201).json(comment);
+  res.status(201).json(populatedComment);
 });
 
 // ======= Update Comment =======
@@ -199,31 +228,10 @@ const updateComment = asyncHandler(async (req, res) => {
   res.json(comment);
 });
 
-// ======= Get Posts =======
-const getPosts = asyncHandler(async (req, res) => {
-  const filter = {};
-  if (req.query.category) filter.category = req.query.category;
-
-  let posts = await Post.find(filter)
-    .populate("user", "name")
-    .sort({ createdAt: -1 })
-    .lean();
-  const userId = req.currentUser._id;
-  const postIds = posts.map((p) => p._id);
-  const likes = await Like.find({ user: userId, post: { $in: postIds } });
-  const likedPostIds = likes.map((l) => l.post.toString());
-  posts = posts.map((p) => ({
-    ...p,
-    isLiked: likedPostIds.includes(p._id.toString()),
-  }));
-
-  res.json(posts);
-});
-
 // ======= Get Comments =======
 const getComments = asyncHandler(async (req, res) => {
   const comments = await Comment.find({ post: req.params.id })
-    .populate("user", "name")
+    .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: 1 });
   res.json(comments);
 });
@@ -236,6 +244,53 @@ const getActivity = asyncHandler(async (req, res) => {
   res.json(activity);
 });
 
+// ======= Get Posts By User Id =======
+const getPostsByUserId = asyncHandler(async (req, res) => {
+  const profileUserId = req.params.userId;
+  const currentUserId = req.currentUser._id;
+
+  let posts = await Post.find({ user: profileUserId })
+    .populate("user", "_id firstName lastName email avatar")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  if (!posts.length) {
+    return res.json([]);
+  }
+
+  const postIds = posts.map((p) => p._id);
+
+  const likes = await Like.find({
+    user: currentUserId,
+    post: { $in: postIds },
+  });
+
+  const likedPostIds = likes.map((l) => l.post.toString());
+
+  posts = posts.map((post) => ({
+    ...post,
+    isLiked: likedPostIds.includes(post._id.toString()),
+  }));
+
+  res.json(posts);
+});
+
+const buildPostResponse = async (postId, userId) => {
+  let post = await Post.findById(postId)
+    .populate("user", "_id firstName lastName email avatar")
+    .lean();
+
+  const isLiked = await Like.exists({
+    user: userId,
+    post: postId,
+  });
+
+  return {
+    ...post,
+    isLiked: !!isLiked,
+  };
+};
+
 module.exports = {
   createPost,
   updatePost,
@@ -245,4 +300,5 @@ module.exports = {
   updateComment,
   getComments,
   getActivity,
+  getPostsByUserId,
 };

@@ -2,6 +2,9 @@ const {
   addLineToStation,
   getAllLinesOfStation,
   getOneLine,
+  addBulkLinesToStation,
+  deleteLineBetweenStations,
+
 } = require("../service/LineServices");
 const express = require("express");
 const {
@@ -24,7 +27,11 @@ route
     addLineToStationValidator,
     addLineToStation
   )
-  .get(getAllLineOfStationValidator, getAllLinesOfStation);
+  .get(getAllLineOfStationValidator, getAllLinesOfStation)
+  .delete(deleteLineBetweenStations);
+route.route("/bulk").post(addBulkLinesToStation);
+
 route.route("/:lineId").get(getOneLine);
+
 
 module.exports = route;
