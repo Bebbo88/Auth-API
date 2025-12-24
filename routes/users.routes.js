@@ -12,6 +12,7 @@ const {
   resetPassword,
   verifyEmailAfterRegister,
   getUserDetails,
+  getUserBookingHistory,
 } = require("../controller/users.controller");
 const appErrors = require("../utils/appErrors");
 const { FAIL } = require("../utils/httpStatusText");
@@ -65,4 +66,7 @@ router.route("/send-verification-password").post(sendVerificationPassword);
 router.route("/verify-password").post(verifyPassword);
 router.route("/reset-password/:token").post(resetPassword);
 
+router.route("/history").get(VerifyToken, getUserBookingHistory);
+
+// Fix imports in users.routes.js first then add
 module.exports = router;
