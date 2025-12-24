@@ -42,9 +42,7 @@ const createPost = asyncHandler(async (req, res) => {
   let mediaType = "NONE";
 
   if (req.file) {
-    media = req.file.path.replace(/\\/g, "/");
-    if (req.file.mimetype.startsWith("image/")) mediaType = "IMAGE";
-    if (req.file.mimetype.startsWith("video/")) mediaType = "VIDEO";
+    media = `/uploads/${req.file.filename}`;
   }
 
   const post = await Post.create({
