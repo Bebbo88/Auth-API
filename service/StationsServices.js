@@ -29,15 +29,23 @@ exports.addStations = asyncHandler(async (req, res) => {
 
 // 📄 Get All Stations
 exports.getAllStations = asyncHandler(async (req, res) => {
-  const limit = req.query.limit || 10;
-  const page = req.query.page || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
   const skip = (page - 1) * limit;
+
+  // Get total count of documents
+  const totalCount = await station.countDocuments();
+  const lastPage = Math.ceil(totalCount / limit);
+
   const allStations = await station
     .find({}, { __v: false })
     .limit(limit)
     .skip(skip)
     .populate("lines", "fromStation toStation price distance");
+
   res.status(200).json({
+    totalCount,
+    lastPage,
     count: allStations.length,
     page,
     limit,

@@ -79,7 +79,6 @@ const server = app.listen(process.env.PORT || 5000, () => {
   console.log("🚀 Server running on port 5000");
 });
 
-<<<<<<< HEAD
 /* ===============================
    SOCKET.IO
 ================================ */
@@ -147,6 +146,3 @@ process.on("unhandledRejection", (error) => {
   console.error(" Unhandled Rejection:", error.message);
   server.close(() => process.exit(1));
 });
-=======
-
->>>>>>> 9d8cfafa0bdcbd05948aa04c04f25e2d5991d001

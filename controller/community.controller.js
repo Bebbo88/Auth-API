@@ -61,7 +61,10 @@ const createPost = asyncHandler(async (req, res) => {
     "Created a new post"
   );
 
-  const responsePost = await buildPostResponse(post._id, req.currentUser._id);
+  const responsePost = await buildPostResponse(
+    post._id,
+    req.currentUser._id
+  );
 
   res.status(201).json(responsePost);
 });
@@ -179,10 +182,8 @@ const addComment = asyncHandler(async (req, res) => {
     content: req.body.content,
   });
 
-  const populatedComment = await Comment.findById(comment._id).populate(
-    "user",
-    "_id firstName lastName email avatar"
-  );
+  const populatedComment = await Comment.findById(comment._id)
+    .populate("user", "_id firstName lastName email avatar");
 
   await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
@@ -271,6 +272,7 @@ const getPostsByUserId = asyncHandler(async (req, res) => {
   }));
 
   res.json(posts);
+
 });
 
 const buildPostResponse = async (postId, userId) => {
