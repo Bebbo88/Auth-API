@@ -61,20 +61,33 @@ const createPost = asyncHandler(async (req, res) => {
     "Created a new post"
   );
 
-  const responsePost = await buildPostResponse(post._id, req.currentUser._id);
+  const responsePost = await buildPostResponse(
+    post._id,
+    req.currentUser._id
+  );
 
   res.status(201).json(responsePost);
 });
 
 // ======= Get Posts =======
 const getPosts = asyncHandler(async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+  const skip = (page - 1) * limit;
+
   const filter = {};
   if (req.query.category) filter.category = req.query.category;
+
+  const totalCount = await Post.countDocuments(filter);
+  const lastPage = Math.ceil(totalCount / limit);
 
   let posts = await Post.find(filter)
     .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip(skip)
     .lean();
+
   const userId = req.currentUser._id;
   const postIds = posts.map((p) => p._id);
   const likes = await Like.find({ user: userId, post: { $in: postIds } });
@@ -84,7 +97,14 @@ const getPosts = asyncHandler(async (req, res) => {
     isLiked: likedPostIds.includes(p._id.toString()),
   }));
 
-  res.json(posts);
+  res.json({
+    totalCount,
+    lastPage,
+    count: posts.length,
+    page,
+    limit,
+    data: posts,
+  });
 });
 // ======= Update Post =======
 const updatePost = asyncHandler(async (req, res) => {
@@ -179,10 +199,8 @@ const addComment = asyncHandler(async (req, res) => {
     content: req.body.content,
   });
 
-  const populatedComment = await Comment.findById(comment._id).populate(
-    "user",
-    "_id firstName lastName email avatar"
-  );
+  const populatedComment = await Comment.findById(comment._id)
+    .populate("user", "_id firstName lastName email avatar");
 
   await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
@@ -246,14 +264,29 @@ const getActivity = asyncHandler(async (req, res) => {
 const getPostsByUserId = asyncHandler(async (req, res) => {
   const profileUserId = req.params.userId;
   const currentUserId = req.currentUser._id;
+  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page) || 1;
+  const skip = (page - 1) * limit;
+
+  const totalCount = await Post.countDocuments({ user: profileUserId });
+  const lastPage = Math.ceil(totalCount / limit);
 
   let posts = await Post.find({ user: profileUserId })
     .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip(skip)
     .lean();
 
   if (!posts.length) {
-    return res.json([]);
+    return res.json({
+      totalCount,
+      lastPage,
+      count: 0,
+      page,
+      limit,
+      data: [],
+    });
   }
 
   const postIds = posts.map((p) => p._id);
@@ -270,7 +303,14 @@ const getPostsByUserId = asyncHandler(async (req, res) => {
     isLiked: likedPostIds.includes(post._id.toString()),
   }));
 
-  res.json(posts);
+  res.json({
+    totalCount,
+    lastPage,
+    count: posts.length,
+    page,
+    limit,
+    data: posts,
+  });
 });
 
 const buildPostResponse = async (postId, userId) => {
