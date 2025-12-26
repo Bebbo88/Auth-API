@@ -33,7 +33,7 @@ const getConversation = asyncWrapper(async (req, res) => {
   const { userId } = req.params;
   const conversation = await Conversation.find({
     members: { $in: [userId] },
-  });
+  }).populate("members", "firstName lastName avatar");
   res.status(200).json({
     status: "SUCCESS",
     data: conversation,
@@ -47,6 +47,12 @@ const newMessage = asyncWrapper(async (req, res) => {
     text,
   });
   await newMessage.save();
+
+  // [NEW] Update the conversation's timestamp so it moves to top
+  await Conversation.findByIdAndUpdate(conversationId, {
+    updatedAt: new Date(),
+  });
+
   res.status(201).json({
     status: "SUCCESS",
     data: newMessage,
