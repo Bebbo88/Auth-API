@@ -4,13 +4,28 @@ const Message = require("../models/message");
 
 const createConversation = asyncWrapper(async (req, res) => {
   const { senderId, receiverId } = req.body;
-  const newConversation = await Conversation.create({
-    members: [senderId, receiverId],
-  });
-  await newConversation.save();
-  res.status(201).json({
-    status: "SUCCESS",
-    data: newConversation,
+
+  if (!senderId || !receiverId) {
+    return res.status(400).json({
+      status: "fail",
+      message: "senderId and receiverId are required",
+    });
+  }
+
+  // ترتيب ثابت عشان نتفادى التكرار
+  const members = [senderId, receiverId].sort();
+
+  // دور على محادثة موجودة
+  let conversation = await Conversation.findOne({ members });
+
+  // لو مش موجودة، اعمل واحدة
+  if (!conversation) {
+    conversation = await Conversation.create({ members });
+  }
+
+  return res.status(200).json({
+    status: "success",
+    data: conversation,
   });
 });
 
