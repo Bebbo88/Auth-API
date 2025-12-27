@@ -13,7 +13,7 @@ const createConversation = asyncWrapper(async (req, res) => {
     data: newConversation,
   });
 });
-
+/// must return conversation with populate the members
 const getConversation = asyncWrapper(async (req, res) => {
   const { userId } = req.params;
   const conversation = await Conversation.find({
@@ -28,7 +28,7 @@ const newMessage = asyncWrapper(async (req, res) => {
   const { conversationId, senderId, text } = req.body;
   const newMessage = await Message.create({
     conversationId,
-    senderId,
+    sender: senderId,
     text,
   });
   await newMessage.save();
@@ -37,7 +37,7 @@ const newMessage = asyncWrapper(async (req, res) => {
     data: newMessage,
   });
 });
-
+// must return sender id
 const getMessages = asyncWrapper(async (req, res) => {
   const { conversationId } = req.params;
   const messages = await Message.find({ conversationId });
