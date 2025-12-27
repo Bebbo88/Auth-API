@@ -40,13 +40,15 @@ const getConversation = asyncWrapper(async (req, res) => {
   });
 });
 const newMessage = asyncWrapper(async (req, res) => {
-  const { conversationId, senderId, text } = req.body;
+  const { conversationId, senderId, text, replyTo } = req.body;
   const newMessage = await Message.create({
     conversationId,
     senderId,
     text,
+    replyTo: replyTo || null,
   });
   await newMessage.save();
+  await newMessage.populate("replyTo");
 
   // [NEW] Update the conversation's timestamp so it moves to top
   await Conversation.findByIdAndUpdate(conversationId, {
@@ -61,7 +63,10 @@ const newMessage = asyncWrapper(async (req, res) => {
 
 const getMessages = asyncWrapper(async (req, res) => {
   const { conversationId } = req.params;
-  const messages = await Message.find({ conversationId });
+  const messages = await Message.find({ conversationId }).populate(
+    "replyTo",
+    "text senderId"
+  );
   res.status(200).json({
     status: "SUCCESS",
     data: messages,
