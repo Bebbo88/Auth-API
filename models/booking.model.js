@@ -14,8 +14,11 @@ const bookingSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["active", "cancelled", "completed"],
-            default: "active",
+            enum: ["pending", "active", "cancelled", "completed"],
+            default: "pending",
+        },
+        expiresAt: {
+            type: Date,
         },
         price: {
             type: Number,
@@ -27,6 +30,7 @@ const bookingSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
 
 // Prevent duplicate active bookings for same user on same vehicle
 // This replaces the .includes check we had before

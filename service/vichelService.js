@@ -69,7 +69,7 @@ exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
   // Let's attach just the count or basic info as before.
 
   const results = await Promise.all(vichels.map(async (vehicle) => {
-    const bookings = await Booking.find({ vehicle: vehicle._id, status: "active" }).populate("user", "firstName lastName email phoneNumber");
+    const bookings = await Booking.find({ vehicle: vehicle._id, status: { $in: ["active", "pending"] } }).populate("user", "firstName lastName email phoneNumber");
     const activeBookingsCount = bookings.length;
     const availableSeats = vehicle.capacity - activeBookingsCount;
     return {
@@ -181,7 +181,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   // Count active bookings
   const activeBookingsCount = await Booking.countDocuments({
     vehicle: vichelId,
-    status: "active",
+    status: { $in: ["active", "pending"] },
   });
 
   // Check capacity
@@ -193,7 +193,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   const existingBooking = await Booking.findOne({
     vehicle: vichelId,
     user: userId,
-    status: "active",
+    status: { $in: ["active", "pending"] },
   });
 
   if (existingBooking) {
@@ -203,8 +203,10 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   const newBooking = await Booking.create({
     user: userId,
     vehicle: vichelId,
-    status: "active",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 60 * 1000), // دقيقة
   });
+
 
   res.status(200).json({
     status: "success",
@@ -212,6 +214,30 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     data: newBooking,
   });
 });
+exports.confirmBooking = asyncHandler(async (req, res, next) => {
+  const booking = await Booking.findById(req.params.id);
+
+  if (!booking) {
+    return next(new appErrors.create("Booking not found", 404));
+  }
+
+  if (booking.status !== "pending") {
+    return next(new appErrors.create("Booking already processed", 400));
+  }
+
+  if (booking.expiresAt < Date.now()) {
+    booking.status = "cancelled";
+    await booking.save();
+    return next(new appErrors.create("Booking expired", 400));
+  }
+
+  booking.status = "active";
+  booking.expiresAt = null;
+  await booking.save();
+
+  res.json({ message: "Booking confirmed" });
+});
+
 
 exports.cancelBooking = asyncHandler(async (req, res, next) => {
   const { vichelId } = req.params;
@@ -221,7 +247,7 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
   const booking = await Booking.findOne({
     vehicle: vichelId,
     user: userId,
-    status: "active",
+    status: { $in: ["active", "pending"] },
   });
 
   if (!booking) {
