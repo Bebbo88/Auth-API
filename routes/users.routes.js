@@ -41,7 +41,7 @@ const upload = multer({ storage, fileFilter });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 50,
   message: "قمت بمحاولات تسجيل دخول كثيرة برجاء المحاولة بعد 15 دقيقة",
 });
 
