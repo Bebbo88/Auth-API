@@ -8,7 +8,10 @@ const {
   updateComment,
   getComments,
   getActivity,
+  getComments,
+  getActivity,
   getPostsByUserId,
+  getPostLikers,
 } = require("../controller/community.controller");
 const VerifyToken = require("../middlewares/verifyToken");
 const multer = require("multer");
@@ -43,6 +46,7 @@ router.put("/posts/:id", VerifyToken, upload.single("media"), updatePost);
 router.get("/posts", VerifyToken, getPosts);
 router.get("/users/:userId/posts", VerifyToken, getPostsByUserId);
 router.post("/posts/:id/like", VerifyToken, likePost);
+router.get("/posts/:id/likes", VerifyToken, getPostLikers);
 
 // Comments
 router.post("/posts/:id/comments", VerifyToken, addComment);

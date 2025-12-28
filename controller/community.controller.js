@@ -61,10 +61,7 @@ const createPost = asyncHandler(async (req, res) => {
     "Created a new post"
   );
 
-  const responsePost = await buildPostResponse(
-    post._id,
-    req.currentUser._id
-  );
+  const responsePost = await buildPostResponse(post._id, req.currentUser._id);
 
   res.status(201).json(responsePost);
 });
@@ -199,8 +196,10 @@ const addComment = asyncHandler(async (req, res) => {
     content: req.body.content,
   });
 
-  const populatedComment = await Comment.findById(comment._id)
-    .populate("user", "_id firstName lastName email avatar");
+  const populatedComment = await Comment.findById(comment._id).populate(
+    "user",
+    "_id firstName lastName email avatar"
+  );
 
   await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
@@ -329,11 +328,21 @@ const buildPostResponse = async (postId, userId) => {
   };
 };
 
+const getPostLikers = asyncHandler(async (req, res) => {
+  const likers = await Like.find({ post: req.params.id })
+    .populate("user", "_id firstName lastName email avatar")
+    .sort({ createdAt: -1 });
+
+  const users = likers.map((like) => like.user);
+  res.json(users);
+});
+
 module.exports = {
   createPost,
   updatePost,
   getPosts,
   likePost,
+  getPostLikers,
   addComment,
   updateComment,
   getComments,
