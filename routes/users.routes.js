@@ -1,6 +1,6 @@
 const express = require("express");
 const VerifyToken = require("../middlewares/verifyToken");
-const multer = require("multer");
+const upload = require("../middlewares/upload");
 const {
   register,
   login,
@@ -14,31 +14,10 @@ const {
   getUserDetails,
   getUserBookingHistory,
 } = require("../controller/users.controller");
-const appErrors = require("../utils/appErrors");
-const { FAIL } = require("../utils/httpStatusText");
+
 const rateLimit = require("express-rate-limit");
-const path = require("path");
 
 const router = express.Router();
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, "../uploads"));
-  },
-  filename: function (req, file, cb) {
-    const ext = file.mimetype.split("/")[1];
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + "." + ext);
-  },
-});
-const fileFilter = (req, file, cb) => {
-  const imgEXT = file.mimetype.split("/")[0];
-  if (imgEXT === "image") {
-    cb(null, true);
-  } else {
-    cb(appErrors.create("only images are allowed", 400, FAIL), false);
-  }
-};
-const upload = multer({ storage, fileFilter });
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

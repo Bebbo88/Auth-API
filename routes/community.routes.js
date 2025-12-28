@@ -12,33 +12,7 @@ const {
   getPostLikers,
 } = require("../controller/community.controller");
 const VerifyToken = require("../middlewares/verifyToken");
-const multer = require("multer");
-const appErrors = require("../utils/appErrors");
-const { FAIL } = require("../utils/httpStatusText");
-
-const router = express.Router();
-
-const path = require("path");
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, "../uploads"));
-  },
-  filename: function (req, file, cb) {
-    const ext = file.mimetype.split("/")[1];
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + "." + ext);
-  },
-});
-const fileFilter = (req, file, cb) => {
-  const imgEXT = file.mimetype.split("/")[0];
-  if (imgEXT === "image" || imgEXT === "video") {
-    cb(null, true);
-  } else {
-    cb(appErrors.create("only images are allowed", 400, FAIL), false);
-  }
-};
-const upload = multer({ storage, fileFilter });
+const upload = require("../middlewares/upload");
 
 // Posts
 router.post("/posts", VerifyToken, upload.single("media"), createPost);

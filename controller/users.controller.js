@@ -41,7 +41,7 @@ const register = asyncWrapper(async (req, res, next) => {
     email: req.body.email.toLowerCase().trim(),
     password: hashedPassword,
     role: req.body.role,
-    avatar: req.file ? req.file.filename : undefined,
+    avatar: req.file ? req.file.path : undefined,
   });
 
   const verificationCode = Math.floor(100000 + Math.random() * 900000);
@@ -403,8 +403,8 @@ async function getUserBookingHistory(req, res, next) {
         populate: [
           { path: "fromStation", select: "stationName" },
           { path: "toStation", select: "stationName" },
-        ]
-      }
+        ],
+      },
     })
     .sort({ createdAt: -1 });
 
@@ -413,4 +413,4 @@ async function getUserBookingHistory(req, res, next) {
     results: bookings.length,
     data: bookings,
   });
-};
+}

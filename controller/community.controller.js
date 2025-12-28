@@ -42,7 +42,7 @@ const createPost = asyncHandler(async (req, res) => {
   let mediaType = "NONE";
 
   if (req.file) {
-    media = `/uploads/${req.file.filename}`;
+    media = req.file.path;
   }
 
   const post = await Post.create({
@@ -122,7 +122,7 @@ const updatePost = asyncHandler(async (req, res) => {
   if (category !== undefined) post.category = category;
 
   if (req.file) {
-    post.media = req.file.path.replace(/\\/g, "/");
+    post.media = req.file.path;
     if (req.file.mimetype.startsWith("image/")) post.mediaType = "IMAGE";
     if (req.file.mimetype.startsWith("video/")) post.mediaType = "VIDEO";
   }
