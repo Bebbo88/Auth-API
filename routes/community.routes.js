@@ -39,8 +39,8 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage, fileFilter });
 
 // Posts
-router.post("/posts", VerifyToken, upload.single("uploads"), createPost);
-router.put("/posts/:id", VerifyToken, upload.single("uploads"), updatePost);
+router.post("/posts", VerifyToken, upload.single("media"), createPost);
+router.put("/posts/:id", VerifyToken, upload.single("media"), updatePost);
 router.get("/posts", VerifyToken, getPosts);
 router.get("/users/:userId/posts", VerifyToken, getPostsByUserId);
 router.post("/posts/:id/like", VerifyToken, likePost);
