@@ -1,0 +1,25 @@
+[33m008e07b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: commit (merge): fix
+[33m4a4bf43[m HEAD@{1}: commit: fixing
+[33m032772c[m HEAD@{2}: commit: handle sender to senderd
+[33m944d5f5[m HEAD@{3}: commit: fix
+[33m51e05f3[m HEAD@{4}: commit (merge): handle some changes
+[33ma97efab[m HEAD@{5}: commit: handle some changes
+[33m018b479[m HEAD@{6}: pull --tags origin main: Merge made by the 'ort' strategy.
+[33m6f0be9b[m HEAD@{7}: commit (merge): add socket and handle real time working good1
+[33ma4b7a9f[m HEAD@{8}: commit: add socket and handle real time working good
+[33m81a98b1[m HEAD@{9}: commit (merge): Merge branch 'main' of https://github.com/Bebbo88/Auth-API
+[33m3105502[m HEAD@{10}: commit: handle some conflicts
+[33m8798fb8[m HEAD@{11}: commit (merge): handle some controlles here
+[33m95740d5[m HEAD@{12}: checkout: moving from main to main
+[33m95740d5[m HEAD@{13}: commit: sending emails resolved successfuly
+[33me621134[m HEAD@{14}: commit: sending emails resolved successfuly
+[33m34004d0[m HEAD@{15}: commit: sending emails resolved successfuly
+[33m579ef7e[m HEAD@{16}: commit: changed the verification
+[33md19aeb3[m HEAD@{17}: commit: changed the verification from email
+[33m4f45a01[m HEAD@{18}: commit (merge): changed the verification from email to code
+[33m53b4c92[m HEAD@{19}: commit: fix
+[33m637ccc0[m HEAD@{20}: commit: remove env file from repo and ignore it
+[33m8400c5d[m HEAD@{21}: commit: finish api auth and handle crud for stations , lines and vichels
+[33mad1617e[m HEAD@{22}: commit: fixing avatar file name issue and will be back to it soon
+[33m85a0263[m HEAD@{23}: Branch: renamed refs/heads/master to refs/heads/main
+[33m85a0263[m HEAD@{25}: commit (initial): make CRUD api for courses and auth end points with token
