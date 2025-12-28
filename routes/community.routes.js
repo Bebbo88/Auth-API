@@ -13,6 +13,7 @@ const {
 } = require("../controller/community.controller");
 const VerifyToken = require("../middlewares/verifyToken");
 const upload = require("../middlewares/upload");
+const router = express.Router();
 
 // Posts
 router.post("/posts", VerifyToken, upload.single("media"), createPost);
