@@ -16,7 +16,6 @@ const { Server } = require("socket.io");
 const app = express();
 const Booking = require("./models/booking.model");
 
-
 /* ===============================
    MIDDLEWARES
 ================================ */
@@ -104,7 +103,7 @@ const server = app.listen(process.env.PORT || 5000, () => {
 ================================ */
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: true,
     methods: ["GET", "POST"],
     credentials: true,
   },
