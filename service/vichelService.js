@@ -69,12 +69,17 @@ exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
   // Let's attach just the count or basic info as before.
 
   const results = await Promise.all(vichels.map(async (vehicle) => {
-    const bookings = await Booking.find({ vehicle: vehicle._id, status: "active" }).populate("user", "firstName lastName email phoneNumber");
+    const bookings = await Booking.find({ vehicle: vehicle._id, status: { $in: ["active", "pending"] } }).populate("user", "firstName lastName email phoneNumber");
     const activeBookingsCount = bookings.length;
     const availableSeats = vehicle.capacity - activeBookingsCount;
     return {
       ...vehicle,
-      bookedUsers: bookings.map(b => b.user),
+      bookedUsers: bookings.map(b => ({
+        ...b.user.toObject(),
+        bookingStatus: b.status,
+        bookingId: b._id,
+        bookedAt: b.createdAt
+      })),
       availableSeats
     };
   }));
@@ -181,30 +186,47 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   // Count active bookings
   const activeBookingsCount = await Booking.countDocuments({
     vehicle: vichelId,
-    status: "active",
+    status: { $in: ["active", "pending"] },
   });
 
   // Check capacity
   if (activeBookingsCount >= vehicle.capacity) {
-    return next(new appErrors.create("No seats available", 400));
+    return next(new Error("No seats available", 400));
   }
 
   // Check if user already booked (Active booking)
   const existingBooking = await Booking.findOne({
     vehicle: vichelId,
     user: userId,
-    status: "active",
+    status: { $in: ["active", "pending"] },
   });
 
+
+
   if (existingBooking) {
-    return next(new appErrors.create("You have already booked a seat", 400));
+    return next(new Error("You have already booked a seat", 400));
+  }
+  const bookAnothervichel = await Booking.findOne({
+    user: userId,
+    status: { $in: ["active", "pending"] },
+  });
+  if (bookAnothervichel) {
+    return next(new Error("You have already booked a seat in another vichel", 400));
+
   }
 
   const newBooking = await Booking.create({
     user: userId,
     vehicle: vichelId,
-    status: "active",
+    status: "pending",
+    expiresAt: new Date(Date.now() + 60 * 10000), // دقيقة
   });
+
+  // Populate user and vehicle details
+  await newBooking.populate([
+    { path: "user", select: "firstName lastName email" },
+    { path: "vehicle", select: "model plateNumber driverName" }
+  ]);
 
   res.status(200).json({
     status: "success",
@@ -212,6 +234,31 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     data: newBooking,
   });
 });
+exports.confirmBooking = asyncHandler(async (req, res, next) => {
+  const { bookingId } = req.params;
+  const booking = await Booking.findById(bookingId);
+
+  if (!booking) {
+    return next(new Error("Booking not found", 404));
+  }
+
+  if (booking.status !== "pending") {
+    return next(new Error("Booking already processed", 400));
+  }
+
+  if (booking.expiresAt < Date.now()) {
+    booking.status = "cancelled";
+    await booking.save();
+    return next(new Error("Booking expired", 400));
+  }
+
+  booking.status = "active";
+  booking.expiresAt = null;
+  await booking.save();
+
+  res.json({ message: "Booking confirmed" });
+});
+
 
 exports.cancelBooking = asyncHandler(async (req, res, next) => {
   const { vichelId } = req.params;
@@ -221,16 +268,20 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
   const booking = await Booking.findOne({
     vehicle: vichelId,
     user: userId,
-    status: "active",
+    status: { $in: ["active", "pending"] },
   });
 
   if (!booking) {
-    return next(new appErrors.create("No active booking found for this vehicle", 404));
+    return next(new Error("No active booking found for this vehicle", 404));
   }
 
   // Mark as cancelled
   booking.status = "cancelled";
   await booking.save();
+  await booking.populate([
+    { path: "user", select: "firstName lastName email" },
+    { path: "vehicle", select: "model plateNumber driverName" }
+  ]);
 
   res.status(200).json({
     status: "success",

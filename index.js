@@ -5,18 +5,17 @@ const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const path = require("path");
-
+const cron = require("node-cron");
 const usersRouter = require("./routes/users.routes");
 const routeStation = require("./routes/StationRoue");
 const communityRoutes = require("./routes/community.routes");
 const conversationRoutes = require("./routes/conversation.routes");
 const messageRoutes = require("./routes/messages.routes");
-
 const { ERROR } = require("./utils/httpStatusText");
-
 const { Server } = require("socket.io");
-
 const app = express();
+const Booking = require("./models/booking.model");
+
 
 /* ===============================
    MIDDLEWARES
@@ -77,6 +76,20 @@ app.use((err, req, res, next) => {
     data: null,
     code: err.statusCode || 500,
   });
+});
+
+/* ===============================
+   Cron Job
+================================ */
+cron.schedule("* * * * *", async () => {
+  await Booking.updateMany(
+    {
+      status: "pending",
+      expiresAt: { $lt: new Date() },
+    },
+    { status: "cancelled" }
+  );
+  console.log("Cancelled expired bookings");
 });
 
 /* ===============================
