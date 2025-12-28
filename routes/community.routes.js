@@ -8,7 +8,6 @@ const {
   updateComment,
   getComments,
   getActivity,
-  getActivity,
   getPostsByUserId,
   getPostLikers,
 } = require("../controller/community.controller");
