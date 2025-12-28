@@ -8,7 +8,6 @@ const {
   updateComment,
   getComments,
   getActivity,
-  getComments,
   getActivity,
   getPostsByUserId,
   getPostLikers,
