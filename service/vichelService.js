@@ -74,7 +74,12 @@ exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
     const availableSeats = vehicle.capacity - activeBookingsCount;
     return {
       ...vehicle,
-      bookedUsers: bookings.map(b => b.user),
+      bookedUsers: bookings.map(b => ({
+        ...b.user.toObject(),
+        bookingStatus: b.status,
+        bookingId: b._id,
+        bookedAt: b.createdAt
+      })),
       availableSeats
     };
   }));
@@ -186,7 +191,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
 
   // Check capacity
   if (activeBookingsCount >= vehicle.capacity) {
-    return next(new appErrors.create("No seats available", 400));
+    return next(new Error("No seats available", 400));
   }
 
   // Check if user already booked (Active booking)
@@ -196,8 +201,18 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     status: { $in: ["active", "pending"] },
   });
 
+
+
   if (existingBooking) {
-    return next(new appErrors.create("You have already booked a seat", 400));
+    return next(new Error("You have already booked a seat", 400));
+  }
+  const bookAnothervichel = await Booking.findOne({
+    user: userId,
+    status: { $in: ["active", "pending"] },
+  });
+  if (bookAnothervichel) {
+    return next(new Error("You have already booked a seat in another vichel", 400));
+
   }
 
   const newBooking = await Booking.create({
