@@ -17,11 +17,12 @@ const {
 const appErrors = require("../utils/appErrors");
 const { FAIL } = require("../utils/httpStatusText");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 
 const router = express.Router();
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads");
+    cb(null, path.join(__dirname, "../uploads"));
   },
   filename: function (req, file, cb) {
     const ext = file.mimetype.split("/")[1];

@@ -18,9 +18,11 @@ const { FAIL } = require("../utils/httpStatusText");
 
 const router = express.Router();
 
+const path = require("path");
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads");
+    cb(null, path.join(__dirname, "../uploads"));
   },
   filename: function (req, file, cb) {
     const ext = file.mimetype.split("/")[1];
