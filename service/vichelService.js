@@ -204,7 +204,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     user: userId,
     vehicle: vichelId,
     status: "pending",
-    expiresAt: new Date(Date.now() + 60 * 1000), // دقيقة
+    expiresAt: new Date(Date.now() + 60 * 10000), // دقيقة
   });
 
   // Populate user and vehicle details
@@ -220,20 +220,21 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   });
 });
 exports.confirmBooking = asyncHandler(async (req, res, next) => {
-  const booking = await Booking.findById(req.params.id);
+  const { bookingId } = req.params;
+  const booking = await Booking.findById(bookingId);
 
   if (!booking) {
-    return next(new appErrors.create("Booking not found", 404));
+    return next(new Error("Booking not found", 404));
   }
 
   if (booking.status !== "pending") {
-    return next(new appErrors.create("Booking already processed", 400));
+    return next(new Error("Booking already processed", 400));
   }
 
   if (booking.expiresAt < Date.now()) {
     booking.status = "cancelled";
     await booking.save();
-    return next(new appErrors.create("Booking expired", 400));
+    return next(new Error("Booking expired", 400));
   }
 
   booking.status = "active";
@@ -256,12 +257,16 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
   });
 
   if (!booking) {
-    return next(new appErrors.create("No active booking found for this vehicle", 404));
+    return next(new Error("No active booking found for this vehicle", 404));
   }
 
   // Mark as cancelled
   booking.status = "cancelled";
   await booking.save();
+  await booking.populate([
+    { path: "user", select: "firstName lastName email" },
+    { path: "vehicle", select: "model plateNumber driverName" }
+  ]);
 
   res.status(200).json({
     status: "success",

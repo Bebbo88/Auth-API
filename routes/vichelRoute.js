@@ -8,6 +8,7 @@ const {
   resetVichelBookings,
   getVichelActiveTrip,
   getVehicleTrips,
+  confirmBooking,
 } = require("../service/vichelService");
 const express = require("express");
 const {
@@ -36,9 +37,11 @@ route
   .route("/:vichelId/book")
   .post(VerifyToken, bookSeat)
   .delete(VerifyToken, cancelBooking);
+route
+  .route("/:vichelId/book/:bookingId/confirm")
+  .post(VerifyToken, confirmBooking)
 
 route.route("/:vichelId/reset").post(VerifyToken, resetVichelBookings);
 route.route("/:vichelId/active-trip").get(VerifyToken, getVichelActiveTrip);
 route.route("/:vichelId/trips").get(VerifyToken, getVehicleTrips);
-
 module.exports = route;
