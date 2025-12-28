@@ -207,6 +207,11 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     expiresAt: new Date(Date.now() + 60 * 1000), // دقيقة
   });
 
+  // Populate user and vehicle details
+  await newBooking.populate([
+    { path: "user", select: "firstName lastName email" },
+    { path: "vehicle", select: "model plateNumber driverName" }
+  ]);
 
   res.status(200).json({
     status: "success",
