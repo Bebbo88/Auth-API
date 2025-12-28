@@ -373,6 +373,26 @@ const resetPassword = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const updateProfile = asyncWrapper(async (req, res, next) => {
+  if (!req.file) {
+    return next(appErrors.create("Please upload a file", 400, FAIL));
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.currentUser.id,
+    { avatar: req.file.path },
+    { new: true }
+  );
+
+  res.status(200).json({
+    status: SUCCESS,
+    data: {
+      user: updatedUser,
+      message: "Profile updated successfully",
+    },
+  });
+});
+
 module.exports = {
   getUserDetails,
   register,
@@ -386,6 +406,7 @@ module.exports = {
   verifyPassword,
   verifyPassword,
   resetPassword,
+  updateProfile,
   getUserBookingHistory,
 };
 

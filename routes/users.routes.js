@@ -13,6 +13,7 @@ const {
   verifyEmailAfterRegister,
   getUserDetails,
   getUserBookingHistory,
+  updateProfile,
 } = require("../controller/users.controller");
 
 const rateLimit = require("express-rate-limit");
@@ -40,6 +41,9 @@ router.route("/verify-email").post(verifyEmailAfterRegister);
 
 //change password
 router.route("/change-password").post(VerifyToken, changePassword);
+router
+  .route("/update-profile")
+  .patch(VerifyToken, upload.single("avatar"), updateProfile);
 
 //password reset
 router.route("/send-verification-password").post(sendVerificationPassword);
