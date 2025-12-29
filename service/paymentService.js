@@ -69,6 +69,47 @@ exports.createCheckoutSession = asyncHandler(async (req, res, next) => {
   }
 });
 
+exports.confirmPayment = asyncHandler(async (req, res, next) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return next(appErrors.create("Session ID is required", 400));
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === "paid") {
+      const bookingId = session.client_reference_id;
+
+      const booking = await Booking.findById(bookingId);
+      if (!booking) {
+        return next(appErrors.create("Booking not found", 404));
+      }
+
+      if (booking.status === "pending") {
+        booking.status = "active";
+        booking.expiresAt = null;
+        await booking.save();
+        console.log(`[PAYMENT] Booking ${bookingId} confirmed via fallback`);
+      }
+
+      res.status(200).json({
+        status: "success",
+        message: "Booking confirmed",
+      });
+    } else {
+      res.status(400).json({
+        status: "error",
+        message: "Payment not completed",
+      });
+    }
+  } catch (error) {
+    console.error("[PAYMENT] Sync Error:", error.message);
+    return next(appErrors.create(error.message, 500));
+  }
+});
+
 exports.webhookCheckout = asyncHandler(async (req, res, next) => {
   const sig = req.headers["stripe-signature"];
   let event;
