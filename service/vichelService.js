@@ -27,7 +27,9 @@ exports.addVichelToLine = asyncHandler(async (req, res, next) => {
     plateNumber: plateNumber,
   });
   if (sameCar) {
-    return next(new appErrors.create("This Car is already exist in this line", 400));
+    return next(
+      new appErrors.create("This Car is already exist in this line", 400)
+    );
   }
 
   // إضافة العربية للخط الأصلي
@@ -47,60 +49,71 @@ exports.addVichelToLine = asyncHandler(async (req, res, next) => {
 
   return res.status(201).json({
     message: "Vichel added to both directions successfully",
-    data: { original: vichelDataOriginal, reverse: vichelDataReverse }
+    data: { original: vichelDataOriginal, reverse: vichelDataReverse },
   });
 });
 
-
 exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
   const { lineId } = req.params;
-  const vichels = await VichelModel.find({ line: lineId }).populate({
-    path: "line",
-    select: "fromStation toStation",
-    populate: [
-      { path: "fromStation", select: "stationName" },
-      { path: "toStation", select: "stationName" },
-    ],
-  }).lean();
+  const vichels = await VichelModel.find({ line: lineId })
+    .populate({
+      path: "line",
+      select: "fromStation toStation",
+      populate: [
+        { path: "fromStation", select: "stationName" },
+        { path: "toStation", select: "stationName" },
+      ],
+    })
+    .lean();
 
   // Attach bookings count or users for each vehicle
-  // Warning: Doing this in a loop can be performance heavy, but for MVP it's okay. 
+  // Warning: Doing this in a loop can be performance heavy, but for MVP it's okay.
   // Better approach: Aggregate.
   // Let's attach just the count or basic info as before.
 
-  const results = await Promise.all(vichels.map(async (vehicle) => {
-    const bookings = await Booking.find({ vehicle: vehicle._id, status: { $in: ["active", "pending"] } }).populate("user", "firstName lastName email phoneNumber");
-    const activeBookingsCount = bookings.length;
-    const availableSeats = vehicle.capacity - activeBookingsCount;
-    return {
-      ...vehicle,
-      bookedUsers: bookings.map(b => ({
-        ...b.user.toObject(),
-        bookingStatus: b.status,
-        bookingId: b._id,
-        bookedAt: b.createdAt
-      })),
-      availableSeats
-    };
-  }));
+  const results = await Promise.all(
+    vichels.map(async (vehicle) => {
+      const bookings = await Booking.find({
+        vehicle: vehicle._id,
+        status: { $in: ["active", "pending"] },
+      }).populate("user", "firstName lastName email phoneNumber");
+      const activeBookingsCount = bookings.length;
+      const availableSeats = vehicle.capacity - activeBookingsCount;
+      return {
+        ...vehicle,
+        bookedUsers: bookings.map((b) => ({
+          ...b.user.toObject(),
+          bookingStatus: b.status,
+          bookingId: b._id,
+          bookedAt: b.createdAt,
+        })),
+        availableSeats,
+      };
+    })
+  );
 
   res.status(200).json({ count: results.length, results });
 });
 
 exports.getVichelOfLine = asyncHandler(async (req, res) => {
   const { veivheId } = req.params;
-  const vehicle = await VichelModel.findById(veivheId).populate({
-    path: "line",
-    select: "fromStation toStation",
-    populate: [
-      { path: "fromStation", select: "stationName" },
-      { path: "toStation", select: "stationName" },
-    ],
-  }).lean();
+  const vehicle = await VichelModel.findById(veivheId)
+    .populate({
+      path: "line",
+      select: "fromStation toStation",
+      populate: [
+        { path: "fromStation", select: "stationName" },
+        { path: "toStation", select: "stationName" },
+      ],
+    })
+    .lean();
 
   if (vehicle) {
-    const bookings = await Booking.find({ vehicle: vehicle._id, status: "active" }).populate("user", "firstName lastName email phoneNumber");
-    vehicle.bookedUsers = bookings.map(b => b.user);
+    const bookings = await Booking.find({
+      vehicle: vehicle._id,
+      status: "active",
+    }).populate("user", "firstName lastName email phoneNumber");
+    vehicle.bookedUsers = bookings.map((b) => b.user);
     vehicle.availableSeats = vehicle.capacity - bookings.length;
   }
 
@@ -142,18 +155,28 @@ exports.addBulkVichelsToLine = asyncHandler(async (req, res, next) => {
       if (exists) continue;
 
       // إضافة للعربية على الخط الأصلي
-      const vichelOriginal = await VichelModel.create([{
-        ...vehicle,
-        line: line._id
-      }], { session });
+      const vichelOriginal = await VichelModel.create(
+        [
+          {
+            ...vehicle,
+            line: line._id,
+          },
+        ],
+        { session }
+      );
       createdVehicles.push(vichelOriginal[0]);
 
       // إضافة للخط العكسي لو موجود
       if (reverseLine) {
-        const vichelReverse = await VichelModel.create([{
-          ...vehicle,
-          line: reverseLine._id
-        }], { session });
+        const vichelReverse = await VichelModel.create(
+          [
+            {
+              ...vehicle,
+              line: reverseLine._id,
+            },
+          ],
+          { session }
+        );
         createdVehicles.push(vichelReverse[0]);
       }
     }
@@ -165,7 +188,7 @@ exports.addBulkVichelsToLine = asyncHandler(async (req, res, next) => {
       status: "success",
       message: "Vehicles added to line (original & reverse) successfully",
       count: createdVehicles.length,
-      data: createdVehicles
+      data: createdVehicles,
     });
   } catch (error) {
     await session.abortTransaction();
@@ -201,8 +224,6 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     status: { $in: ["active", "pending"] },
   });
 
-
-
   if (existingBooking) {
     return next(new Error("You have already booked a seat", 400));
   }
@@ -211,26 +232,32 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
     status: { $in: ["active", "pending"] },
   });
   if (bookAnothervichel) {
-    return next(new Error("You have already booked a seat in another vichel", 400));
-
+    return next(
+      new Error("You have already booked a seat in another vichel", 400)
+    );
   }
+
+  // Get Line Price
+  const line = await Line.findById(vehicle.line);
+  const price = line ? line.price : 0;
 
   const newBooking = await Booking.create({
     user: userId,
     vehicle: vichelId,
     status: "pending",
-    expiresAt: new Date(Date.now() + 60 * 10000), // دقيقة
+    price: price, // Add price here
+    expiresAt: new Date(Date.now() + 60 * 10000), // 10 minutes
   });
 
   // Populate user and vehicle details
   await newBooking.populate([
     { path: "user", select: "firstName lastName email" },
-    { path: "vehicle", select: "model plateNumber driverName" }
+    { path: "vehicle", select: "model plateNumber driverName" },
   ]);
 
   res.status(200).json({
     status: "success",
-    message: "Seat booked successfully",
+    message: "تم حجز المقعد مؤقتًا، يرجى التأكيد قبل انتهاء الوقت",
     data: newBooking,
   });
 });
@@ -259,7 +286,6 @@ exports.confirmBooking = asyncHandler(async (req, res, next) => {
   res.json({ message: "Booking confirmed" });
 });
 
-
 exports.cancelBooking = asyncHandler(async (req, res, next) => {
   const { vichelId } = req.params;
   const userId = req.currentUser._id;
@@ -280,7 +306,7 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
   await booking.save();
   await booking.populate([
     { path: "user", select: "firstName lastName email" },
-    { path: "vehicle", select: "model plateNumber driverName" }
+    { path: "vehicle", select: "model plateNumber driverName" },
   ]);
 
   res.status(200).json({
@@ -308,9 +334,11 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
   });
 
   const activeBookingsCount = activeBookings.length;
-  const bookingIds = activeBookings.map(b => b._id);
+  const bookingIds = activeBookings.map((b) => b._id);
 
-  console.log(`[RESET] Resetting vehicle ${vichelId}. Found ${activeBookingsCount} active bookings.`);
+  console.log(
+    `[RESET] Resetting vehicle ${vichelId}. Found ${activeBookingsCount} active bookings.`
+  );
 
   // Create Trip Record
   await Trip.create({
@@ -326,14 +354,16 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
     { $set: { status: "completed" } }
   );
 
-  console.log(`[RESET] Update Result: matched ${result.matchedCount}, modified ${result.modifiedCount}`);
+  console.log(
+    `[RESET] Update Result: matched ${result.matchedCount}, modified ${result.modifiedCount}`
+  );
 
   res.status(200).json({
     status: "success",
     message: "Vehicle passengers reset and trip recorded successfully",
     data: {
       modifiedCount: result.modifiedCount,
-      tripRecorded: true
+      tripRecorded: true,
     },
   });
 });
@@ -349,12 +379,14 @@ exports.getVichelActiveTrip = asyncHandler(async (req, res, next) => {
   // Find active bookings (Current Trip)
   const activeBookings = await Booking.find({
     vehicle: vichelId,
-    status: "active"
+    status: "active",
   })
     .populate("user", "firstName lastName email phoneNumber")
     .sort({ createdAt: -1 });
 
-  console.log(`[ACTIVE_TRIP] Vehicle ${vichelId}: Found ${activeBookings.length} active bookings.`);
+  console.log(
+    `[ACTIVE_TRIP] Vehicle ${vichelId}: Found ${activeBookings.length} active bookings.`
+  );
 
   res.status(200).json({
     status: "success",
@@ -363,9 +395,9 @@ exports.getVichelActiveTrip = asyncHandler(async (req, res, next) => {
       vehicle: {
         plateNumber: vehicle.plateNumber,
         capacity: vehicle.capacity,
-        availableSeats: vehicle.capacity - activeBookings.length
+        availableSeats: vehicle.capacity - activeBookings.length,
       },
-      passengers: activeBookings
+      passengers: activeBookings,
     },
   });
 });
@@ -380,27 +412,27 @@ exports.getVehicleTrips = asyncHandler(async (req, res, next) => {
 
   // Aggregate trips grouped by Date (YYYY-MM-DD)
   const trips = await Trip.find({
-    vehicle: vichelId
+    vehicle: vichelId,
   })
     .populate({
       path: "bookings",
       populate: {
         path: "user",
-        select: "firstName lastName email phoneNumber" // Select user fields
-      }
+        select: "firstName lastName email phoneNumber", // Select user fields
+      },
     })
     .sort({ date: -1 });
 
   // Group by date manually (easier with populated data than aggregation)
   const groupedTrips = {};
-  trips.forEach(trip => {
-    const dateKey = trip.date.toISOString().split('T')[0];
+  trips.forEach((trip) => {
+    const dateKey = trip.date.toISOString().split("T")[0];
     if (!groupedTrips[dateKey]) {
       groupedTrips[dateKey] = {
         _id: dateKey,
         trips: [],
         totalPassengers: 0,
-        tripCount: 0
+        tripCount: 0,
       };
     }
     groupedTrips[dateKey].trips.push(trip);
@@ -408,7 +440,9 @@ exports.getVehicleTrips = asyncHandler(async (req, res, next) => {
     groupedTrips[dateKey].tripCount += 1;
   });
 
-  const resultValues = Object.values(groupedTrips).sort((a, b) => b._id.localeCompare(a._id));
+  const resultValues = Object.values(groupedTrips).sort((a, b) =>
+    b._id.localeCompare(a._id)
+  );
 
   res.status(200).json({
     status: "success",

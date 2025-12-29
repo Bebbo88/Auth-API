@@ -11,6 +11,7 @@ const routeStation = require("./routes/StationRoue");
 const communityRoutes = require("./routes/community.routes");
 const conversationRoutes = require("./routes/conversation.routes");
 const messageRoutes = require("./routes/messages.routes");
+const paymentRoutes = require("./routes/payment.routes");
 const { ERROR } = require("./utils/httpStatusText");
 const { Server } = require("socket.io");
 const app = express();
@@ -34,7 +35,12 @@ app.use(
     contentSecurityPolicy: false, // أثناء التطوير
   })
 );
+
 app.use(cookieParser());
+
+// Special case for stripe webhook - needs raw body
+app.use("/api/payment/webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json());
 app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -46,6 +52,7 @@ app.use("/api/station", routeStation);
 app.use("/api/community", communityRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/payment", paymentRoutes);
 
 /* ===============================
    DB CONNECTION
