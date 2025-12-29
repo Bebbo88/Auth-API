@@ -229,7 +229,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   }
   const bookAnothervichel = await Booking.findOne({
     user: userId,
-    status: { $in: ["active", "pending"] },
+    status: { $in: ["pending"] },
   });
   if (bookAnothervichel) {
     return next(
