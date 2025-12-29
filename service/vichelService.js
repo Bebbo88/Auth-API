@@ -13,7 +13,7 @@ exports.addVichelToLine = asyncHandler(async (req, res, next) => {
   // جلب الخط الأصلي والعكسي
   const line = await Line.findById(lineId);
   if (!line) {
-    return next(new appErrors.create("Line not found", 404));
+    return next(appErrors.create("Line not found", 404));
   }
 
   const reverseLine = await Line.findOne({
@@ -203,7 +203,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
 
   const vehicle = await VichelModel.findById(vichelId);
   if (!vehicle) {
-    return next(new appErrors.create("Vehicle not found", 404));
+    return next(appErrors.create("Vehicle not found", 404));
   }
 
   // Count active bookings
