@@ -225,17 +225,19 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
 
   try {
     const { stationId } = req.params;
-    const { toStation } = req.body;
+    // Allow toStation from body or query params to support strict DELETE implementations
+    const toStation = req.body?.toStation || req.query.toStation;
 
     if (!toStation) {
-      throw new appErrors.create("toStation is required", 400);
+      const err = new Error("toStation is required (in body or query)");
+      err.statusCode = 400;
+      throw err;
     }
 
     if (stationId === toStation) {
-      throw new appErrors.create(
-        "Origin and destination stations must be different",
-        400
-      );
+      const err = new Error("Origin and destination stations must be different");
+      err.statusCode = 400;
+      throw err;
     }
 
     const [from, to] = await Promise.all([
@@ -251,7 +253,9 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
     }
 
     if (!from || !to) {
-      throw new appErrors.create("One or both stations not found", 404);
+      const err = new Error("One or both stations not found");
+      err.statusCode = 404;
+      throw err;
     }
 
     // Find both directions
@@ -263,7 +267,9 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
     }).session(session);
 
     if (lines.length === 0) {
-      throw new appErrors.create("Line not found", 404);
+      const err = new Error("Line not found");
+      err.statusCode = 404;
+      throw err;
     }
 
     const lineIds = lines.map((l) => l._id);
@@ -306,10 +312,9 @@ exports.updateLineBetweenStations = asyncHandler(async (req, res, next) => {
     }
 
     if (stationId === toStation) {
-      throw new appErrors.create(
-        "Origin and destination stations must be different",
-        400
-      );
+      const err = new Error("Origin and destination stations must be different");
+      err.statusCode = 400;
+      throw err;
     }
 
     if (price !== undefined && price <= 0) {
