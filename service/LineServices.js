@@ -296,9 +296,13 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
     });
   } catch (error) {
     console.error(`[DELETE] Error in transaction (Session: ${session.id.id}):`, error.message);
-    if (session.inTransaction()) {
-      console.log(`[DELETE] Aborting transaction for session: ${session.id.id}`);
-      await session.abortTransaction();
+    try {
+      if (session.inTransaction()) {
+        console.log(`[DELETE] Aborting transaction for session: ${session.id.id}`);
+        await session.abortTransaction();
+      }
+    } catch (abortError) {
+      console.warn(`[DELETE] Failed to abort transaction: ${abortError.message}`);
     }
     next(error);
   } finally {
