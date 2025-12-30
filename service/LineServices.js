@@ -228,6 +228,8 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
     // Allow toStation from body or query params to support strict DELETE implementations
     const toStation = req.body?.toStation || req.query.toStation;
 
+    console.log(`[DELETE] Request for line cleanup between ${stationId} and ${toStation}. Session: ${session.id.id}`);
+
     if (!toStation) {
       const err = new Error("toStation is required (in body or query)");
       err.statusCode = 400;
@@ -283,8 +285,9 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
 
     await Promise.all([from.save({ session }), to.save({ session })]);
 
+
     await session.commitTransaction();
-    session.endSession();
+    console.log(`[DELETE] Transaction committed for session: ${session.id.id}`);
 
     res.status(200).json({
       status: "success",
@@ -292,9 +295,15 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
       deletedLines: lineIds,
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    console.error(`[DELETE] Error in transaction (Session: ${session.id.id}):`, error.message);
+    if (session.inTransaction()) {
+      console.log(`[DELETE] Aborting transaction for session: ${session.id.id}`);
+      await session.abortTransaction();
+    }
     next(error);
+  } finally {
+    console.log(`[DELETE] Ending session: ${session.id.id}`);
+    session.endSession();
   }
 });
 
