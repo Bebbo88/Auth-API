@@ -221,46 +221,25 @@ exports.getOneLine = asyncHandler(async (req, res, next) => {
 
 exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
 
-  try {
+try {
+  await session.withTransaction(async () => {
     const { stationId } = req.params;
-    // Allow toStation from body or query params to support strict DELETE implementations
-    const toStation = req.body?.toStation || req.query.toStation;
+    const { toStation } = req.query;
 
-    console.log(`[DELETE] Request for line cleanup between ${stationId} and ${toStation}. Session: ${session.id.id}`);
-
-    if (!toStation) {
-      const err = new Error("toStation is required (in body or query)");
-      err.statusCode = 400;
-      throw err;
-    }
-
-    if (stationId === toStation) {
-      const err = new Error("Origin and destination stations must be different");
-      err.statusCode = 400;
-      throw err;
-    }
+    if (!toStation) throw new appErrors.create("toStation is required", 400);
+    if (stationId === toStation)
+      throw new appErrors.create("Origin and destination stations must be different", 400);
 
     const [from, to] = await Promise.all([
       Station.findById(stationId).session(session),
       Station.findById(toStation).session(session),
     ]);
-    if (from.admin.toString() !== req.currentUser._id.toString()) {
-      const err = new Error(
-        "You are not authorized to Add Delete from this station"
-      );
-      err.statusCode = 401;
-      throw err;
-    }
 
-    if (!from || !to) {
-      const err = new Error("One or both stations not found");
-      err.statusCode = 404;
-      throw err;
-    }
+    if (!from || !to) throw new appErrors.create("One or both stations not found", 404);
+    if (from.admin.toString() !== req.currentUser._id.toString())
+      throw new appErrors.create("Not authorized", 401);
 
-    // Find both directions
     const lines = await Line.find({
       $or: [
         { fromStation: stationId, toStation },
@@ -268,47 +247,28 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
       ],
     }).session(session);
 
-    if (lines.length === 0) {
-      const err = new Error("Line not found");
-      err.statusCode = 404;
-      throw err;
-    }
+    if (!lines.length) throw new appErrors.create("Line not found", 404);
 
     const lineIds = lines.map((l) => l._id);
 
-    // Delete lines
     await Line.deleteMany({ _id: { $in: lineIds } }).session(session);
 
-    // Remove line refs from stations
     from.lines = from.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
     to.lines = to.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
 
     await Promise.all([from.save({ session }), to.save({ session })]);
-
-
-    await session.commitTransaction();
-    console.log(`[DELETE] Transaction committed for session: ${session.id.id}`);
 
     res.status(200).json({
       status: "success",
       message: "Line deleted successfully (both directions)",
       deletedLines: lineIds,
     });
-  } catch (error) {
-    console.error(`[DELETE] Error in transaction (Session: ${session.id.id}):`, error.message);
-    try {
-      if (session.inTransaction()) {
-        console.log(`[DELETE] Aborting transaction for session: ${session.id.id}`);
-        await session.abortTransaction();
-      }
-    } catch (abortError) {
-      console.warn(`[DELETE] Failed to abort transaction: ${abortError.message}`);
-    }
-    next(error);
-  } finally {
-    console.log(`[DELETE] Ending session: ${session.id.id}`);
-    session.endSession();
-  }
+  });
+} catch (error) {
+  next(error);
+} finally {
+  session.endSession();
+}
 });
 
 exports.updateLineBetweenStations = asyncHandler(async (req, res, next) => {
