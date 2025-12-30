@@ -9,6 +9,8 @@ const {
   getVichelActiveTrip,
   getVehicleTrips,
   confirmBooking,
+  deleteVichel,
+  updateVichel,
 } = require("../service/vichelService");
 const express = require("express");
 const {
@@ -32,16 +34,27 @@ route
   .get(getVichelOfLineValidator, getAllVichelOfLine);
 route.route("/bulk").post(addBulkVichelsToLine);
 
-route.route("/:veivheId").get(getVichelOfLine);
+route
+  .route("/:vichelId")
+  .get(getVichelOfLine)
+  .delete(VerifyToken, allowedTo(userRoles.ADMIN), deleteVichel)
+  .put(VerifyToken, allowedTo(userRoles.ADMIN), updateVichel);
+
 route
   .route("/:vichelId/book")
   .post(VerifyToken, bookSeat)
   .delete(VerifyToken, cancelBooking);
 route
   .route("/:vichelId/book/:bookingId/confirm")
-  .post(VerifyToken, confirmBooking)
+  .post(VerifyToken, confirmBooking);
 
-route.route("/:vichelId/reset").post(VerifyToken, resetVichelBookings);
-route.route("/:vichelId/active-trip").get(VerifyToken, getVichelActiveTrip);
-route.route("/:vichelId/trips").get(VerifyToken, getVehicleTrips);
+route
+  .route("/:vichelId/reset")
+  .post(VerifyToken, allowedTo(userRoles.ADMIN), resetVichelBookings);
+route
+  .route("/:vichelId/active-trip")
+  .get(VerifyToken, allowedTo(userRoles.ADMIN), getVichelActiveTrip);
+route
+  .route("/:vichelId/trips")
+  .get(VerifyToken, allowedTo(userRoles.ADMIN), getVehicleTrips);
 module.exports = route;

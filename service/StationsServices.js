@@ -1,5 +1,7 @@
 const station = require("../models/StationModel");
 const asyncHandler = require("express-async-handler");
+const User = require("../models/user.model");
+const Line = require("../models/LinesModel");
 
 // ➕ Add Station
 // ➕ Add Stations (Bulk)
@@ -11,6 +13,8 @@ exports.addStations = asyncHandler(async (req, res, next) => {
     data: stations,
   });
 });
+
+// Add Station
 exports.addStations = asyncHandler(async (req, res) => {
   if (!req.body || !Array.isArray(req.body) || req.body.length === 0) {
     return res.status(400).json({
@@ -27,7 +31,46 @@ exports.addStations = asyncHandler(async (req, res) => {
   });
 });
 
-// 📄 Get All Stations
+// Add Admin To Station
+exports.addAdminToStation = asyncHandler(async (req, res) => {
+  const { stationId } = req.params;
+  const { adminId } = req.body;
+
+  const stationToUpdate = await station.findById(stationId);
+  if (!stationToUpdate) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Station not found",
+    });
+  }
+  const admin = await User.findById(adminId);
+  console.log(admin);
+  if (!admin) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Admin not found",
+      data: admin,
+    });
+  }
+  if (stationToUpdate.admin) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Station already has an admin",
+      data: stationToUpdate,
+    });
+  }
+
+  stationToUpdate.admin = adminId;
+  await stationToUpdate.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Admin added to station successfully",
+    data: stationToUpdate,
+  });
+});
+
+// Get All Stations
 exports.getAllStations = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
@@ -53,7 +96,7 @@ exports.getAllStations = asyncHandler(async (req, res) => {
   });
 });
 
-// 📍 Get One Station
+//Get One Station
 exports.getOneStation = asyncHandler(async (req, res) => {
   const { stationId } = req.params;
   const oneStation = await station.findById(stationId).populate({
@@ -75,7 +118,7 @@ exports.getOneStation = asyncHandler(async (req, res) => {
   res.status(200).json({ data: oneStation });
 });
 
-// 📌 Get Nearby Stations (Geo)
+// Get Nearby Stations (Geo)
 exports.getNearbyStations = asyncHandler(async (req, res) => {
   const { lat, lng, distance = 5000 } = req.query;
 
@@ -132,4 +175,54 @@ exports.getNearbyStations = asyncHandler(async (req, res) => {
     count: stations.length,
     data: stations,
   });
+});
+
+// Delete Station
+exports.deleteStation = asyncHandler(async (req, res) => {
+  const { stationId } = req.params;
+
+  // Delete all lines associated with this station (incoming or outgoing)
+  await Line.deleteMany({
+    $or: [{ fromStation: stationId }, { toStation: stationId }],
+  });
+
+  const deletedStation = await station.findByIdAndDelete(stationId);
+
+  if (!deletedStation) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Station not found",
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Station and associated lines deleted successfully",
+    data: deletedStation,
+  });
+});
+
+exports.updateStation = asyncHandler(async (req, res) => {
+  const { stationId } = req.params;
+
+  const stationToUpdate = await station.findById(stationId);
+  if (!stationToUpdate) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Station not found",
+    });
+  }
+
+  if (stationToUpdate.admin.toString() !== req.currentUser._id.toString()) {
+    return res.status(401).json({
+      status: "fail",
+      message: "You are not authorized to update this station",
+    });
+  }
+
+  const updatedStation = await station.findByIdAndUpdate(stationId, req.body, {
+    new: true,
+  });
+
+  res.status(200).json({ data: updatedStation });
 });

@@ -2,10 +2,7 @@ const Line = require("../models/LinesModel");
 const Station = require("../models/StationModel");
 const mongoose = require("mongoose");
 const appErrors = require("../utils/appErrors");
-
 const asyncHandler = require("express-async-handler");
-
-
 
 exports.addBulkLinesToStation = asyncHandler(async (req, res, next) => {
   const session = await mongoose.startSession();
@@ -55,10 +52,7 @@ exports.addBulkLinesToStation = asyncHandler(async (req, res, next) => {
       }).session(session);
 
       if (exists) {
-        throw new appErrors.create(
-          `Line already exists between stations`,
-          400
-        );
+        throw new appErrors.create("Line already exists between stations", 400);
       }
 
       // Create forward & reverse
@@ -112,26 +106,12 @@ exports.addBulkLinesToStation = asyncHandler(async (req, res, next) => {
 
 exports.addLineToStation = asyncHandler(async (req, res, next) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
+    session.startTransaction();
+
     const { stationId } = req.params;
     const { toStation, price, distance } = req.body;
-
-    // Validation
-    if (stationId === toStation) {
-      throw new appErrors.create(
-        "Origin and destination stations must be different",
-        400
-      );
-    }
-
-    if (price <= 0 || distance <= 0) {
-      throw new appErrors.create(
-        "Price and distance must be positive numbers",
-        400
-      );
-    }
 
     const [from, to] = await Promise.all([
       Station.findById(stationId).session(session),
@@ -139,10 +119,33 @@ exports.addLineToStation = asyncHandler(async (req, res, next) => {
     ]);
 
     if (!from || !to) {
-      throw new appErrors.create("One or both stations not found", 404);
+      const err = new Error("One or both stations not found");
+      err.statusCode = 404;
+      throw err;
     }
 
-    // Check existing line (both directions)
+    if (from.admin.toString() !== req.currentUser._id.toString()) {
+      const err = new Error(
+        "You are not authorized to Add line to this station"
+      );
+      err.statusCode = 401;
+      throw err;
+    }
+
+    if (stationId === toStation) {
+      const err = new Error(
+        "Origin and destination stations must be different"
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (price <= 0 || distance <= 0) {
+      const err = new Error("Price and distance must be positive numbers");
+      err.statusCode = 400;
+      throw err;
+    }
+
     const existingLine = await Line.findOne({
       $or: [
         { fromStation: from._id, toStation: to._id },
@@ -151,34 +154,18 @@ exports.addLineToStation = asyncHandler(async (req, res, next) => {
     }).session(session);
 
     if (existingLine) {
-      throw new appErrors.create(
-        "This line or its reverse already exists",
-        400
-      );
+      const err = new Error("This line or its reverse already exists");
+      err.statusCode = 400;
+      throw err;
     }
 
-    // Create lines
     const [lineForward, lineReverse] = await Promise.all([
       Line.create(
-        [
-          {
-            fromStation: from._id,
-            toStation: to._id,
-            price,
-            distance,
-          },
-        ],
+        [{ fromStation: from._id, toStation: to._id, price, distance }],
         { session }
       ),
       Line.create(
-        [
-          {
-            fromStation: to._id,
-            toStation: from._id,
-            price,
-            distance,
-          },
-        ],
+        [{ fromStation: to._id, toStation: from._id, price, distance }],
         { session }
       ),
     ]);
@@ -186,13 +173,9 @@ exports.addLineToStation = asyncHandler(async (req, res, next) => {
     from.lines.push(lineForward[0]._id);
     to.lines.push(lineReverse[0]._id);
 
-    await Promise.all([
-      from.save({ session }),
-      to.save({ session }),
-    ]);
+    await Promise.all([from.save({ session }), to.save({ session })]);
 
     await session.commitTransaction();
-    session.endSession();
 
     res.status(201).json({
       status: "success",
@@ -204,11 +187,11 @@ exports.addLineToStation = asyncHandler(async (req, res, next) => {
     });
   } catch (error) {
     await session.abortTransaction();
-    session.endSession();
     next(error);
+  } finally {
+    session.endSession();
   }
 });
-
 
 exports.getAllLinesOfStation = asyncHandler(async (req, res, next) => {
   const { stationId } = req.params;
@@ -259,6 +242,13 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
       Station.findById(stationId).session(session),
       Station.findById(toStation).session(session),
     ]);
+    if (from.admin.toString() !== req.currentUser._id.toString()) {
+      const err = new Error(
+        "You are not authorized to Add Delete from this station"
+      );
+      err.statusCode = 401;
+      throw err;
+    }
 
     if (!from || !to) {
       throw new appErrors.create("One or both stations not found", 404);
@@ -282,17 +272,10 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
     await Line.deleteMany({ _id: { $in: lineIds } }).session(session);
 
     // Remove line refs from stations
-    from.lines = from.lines.filter(
-      (id) => !lineIds.some((l) => l.equals(id))
-    );
-    to.lines = to.lines.filter(
-      (id) => !lineIds.some((l) => l.equals(id))
-    );
+    from.lines = from.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
+    to.lines = to.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
 
-    await Promise.all([
-      from.save({ session }),
-      to.save({ session }),
-    ]);
+    await Promise.all([from.save({ session }), to.save({ session })]);
 
     await session.commitTransaction();
     session.endSession();
@@ -306,5 +289,75 @@ exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
     await session.abortTransaction();
     session.endSession();
     next(error);
+  }
+});
+
+exports.updateLineBetweenStations = asyncHandler(async (req, res, next) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { stationId } = req.params;
+    const { toStation, price } = req.body;
+
+    if (!toStation) {
+      throw new Error("toStation is required", 400);
+    }
+
+    if (stationId === toStation) {
+      throw new appErrors.create(
+        "Origin and destination stations must be different",
+        400
+      );
+    }
+
+    if (price !== undefined && price <= 0) {
+      throw new Error("Price must be positive", 400);
+    }
+
+    const from = await Station.findById(stationId).session(session);
+    if (!from) {
+      throw new Error("Station not found", 404);
+    }
+
+    if (from.admin.toString() !== req.currentUser._id.toString()) {
+      const err = new Error(
+        "You are not authorized to update lines in this station"
+      );
+      err.statusCode = 401;
+      throw err;
+    }
+
+    const updateData = {};
+    if (price !== undefined) updateData.price = price;
+
+    const result = await Line.updateMany(
+      {
+        $or: [
+          { fromStation: stationId, toStation },
+          { fromStation: toStation, toStation: stationId },
+        ],
+      },
+      { $set: updateData },
+      { session }
+    );
+
+    if (result.matchedCount === 0) {
+      throw new Error("Line not found", 404);
+    }
+
+    await session.commitTransaction();
+
+    res.status(200).json({
+      status: "success",
+      message: "Line updated successfully (both directions)",
+      updatedFields: updateData,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    next(error);
+  } finally {
+    session.endSession();
   }
 });

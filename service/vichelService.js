@@ -3,17 +3,32 @@ const VichelModel = require("../models/vichelModel");
 const Booking = require("../models/booking.model");
 const appErrors = require("../utils/appErrors");
 const mongoose = require("mongoose");
+const station = require("../models/StationModel");
 
 const asyncHandler = require("express-async-handler");
 
 exports.addVichelToLine = asyncHandler(async (req, res, next) => {
-  const { lineId } = req.params;
+  const { lineId, stationId } = req.params;
   const { plateNumber } = req.body;
+
+  const stationData = await station.findById(stationId);
+
+  if (!stationData) {
+    return next(Error("Station not found", 404));
+  }
+
+  if (stationData.admin) {
+    if (stationData.admin.toString() !== req.currentUser._id.toString()) {
+      return next(Error("You are not authorized to add a vehicle", 401));
+    }
+  } else {
+    return next(Error("This Station Doesnot Have Any Admin", 401));
+  }
 
   // جلب الخط الأصلي والعكسي
   const line = await Line.findById(lineId);
   if (!line) {
-    return next(appErrors.create("Line not found", 404));
+    return next(Error("Line not found", 404));
   }
 
   const reverseLine = await Line.findOne({
@@ -27,9 +42,7 @@ exports.addVichelToLine = asyncHandler(async (req, res, next) => {
     plateNumber: plateNumber,
   });
   if (sameCar) {
-    return next(
-      new appErrors.create("This Car is already exist in this line", 400)
-    );
+    return next(new Error("This Car is already exist in this line", 400));
   }
 
   // إضافة العربية للخط الأصلي
@@ -96,8 +109,8 @@ exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
 });
 
 exports.getVichelOfLine = asyncHandler(async (req, res) => {
-  const { veivheId } = req.params;
-  const vehicle = await VichelModel.findById(veivheId)
+  const { vichelId } = req.params;
+  const vehicle = await VichelModel.findById(vichelId)
     .populate({
       path: "line",
       select: "fromStation toStation",
@@ -117,14 +130,14 @@ exports.getVichelOfLine = asyncHandler(async (req, res) => {
     vehicle.availableSeats = vehicle.capacity - bookings.length;
   }
 
-  res.status(200).json({ data: vehicle });
+  res.status(200).json({ data: vehicle, id: vichelId });
 });
 exports.addBulkVichelsToLine = asyncHandler(async (req, res, next) => {
   const { lineId } = req.params;
   const { vehicles } = req.body; // مصفوفة عربيات [{plateNumber, driverName, capacity}, ...]
 
   if (!Array.isArray(vehicles) || vehicles.length === 0) {
-    return next(new appErrors.create("Vehicles array is required", 400));
+    return next(new Error("Vehicles array is required", 400));
   }
 
   const session = await mongoose.startSession();
@@ -133,7 +146,7 @@ exports.addBulkVichelsToLine = asyncHandler(async (req, res, next) => {
   try {
     const line = await Line.findById(lineId).session(session);
     if (!line) {
-      throw new appErrors.create("Line not found", 404);
+      throw new Error("Line not found", 404);
     }
 
     const reverseLine = await Line.findOne({
@@ -203,7 +216,7 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
 
   const vehicle = await VichelModel.findById(vichelId);
   if (!vehicle) {
-    return next(appErrors.create("Vehicle not found", 404));
+    return next(Error("Vehicle not found", 404));
   }
 
   // Count active bookings
@@ -319,61 +332,93 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
 const Trip = require("../models/trip.model"); // Ensure import at top
 
 exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
-  const { vichelId } = req.params;
+  const { stationId } = req.params;
+  const { plateNumber } = req.query; // أو req.body حسب ما تحب
 
-  // Check if vehicle exists
-  const vehicle = await VichelModel.findById(vichelId);
-  if (!vehicle) {
-    return next(new appErrors.create("Vehicle not found", 404));
+  // لو مش مبعت plateNumber
+  if (!plateNumber) {
+    return next(new Error("plateNumber is required to reset bookings", 400));
   }
 
-  // Find active bookings to link to trip
-  const activeBookings = await Booking.find({
-    vehicle: vichelId,
-    status: "active",
-  });
+  // التأكد من وجود المحطة و authorization
+  const stationData = await station.findById(stationId);
+  if (!stationData) {
+    return next(new Error("Station not found", 404));
+  }
 
-  const activeBookingsCount = activeBookings.length;
-  const bookingIds = activeBookings.map((b) => b._id);
+  if (stationData.admin.toString() !== req.currentUser._id.toString()) {
+    return next(new Error("You are not authorized to reset vehicles", 403));
+  }
 
-  console.log(
-    `[RESET] Resetting vehicle ${vichelId}. Found ${activeBookingsCount} active bookings.`
-  );
+  // جلب كل العربيات بنفس plateNumber
+  const vehicles = await VichelModel.find({ plateNumber });
 
-  // Create Trip Record
-  await Trip.create({
-    vehicle: vichelId,
-    passengerCount: activeBookingsCount,
-    bookings: bookingIds,
-    date: new Date(),
-  });
+  if (vehicles.length === 0) {
+    return next(
+      new Error(`No vehicles found with plateNumber ${plateNumber}`, 404)
+    );
+  }
 
-  // Update all active bookings to completed
-  const result = await Booking.updateMany(
-    { vehicle: vichelId, status: "active" },
-    { $set: { status: "completed" } }
-  );
+  let totalModified = 0;
+  let tripsCreated = 0;
 
-  console.log(
-    `[RESET] Update Result: matched ${result.matchedCount}, modified ${result.modifiedCount}`
-  );
+  // Loop لكل عربية
+  for (const vehicle of vehicles) {
+    // جلب الحجوزات الفعالة
+    const activeBookings = await Booking.find({
+      vehicle: vehicle._id,
+      status: "active",
+    });
+
+    if (activeBookings.length === 0) continue;
+
+    // إنشاء سجل Trip
+    await Trip.create({
+      vehicle: vehicle._id,
+      passengerCount: activeBookings.length,
+      bookings: activeBookings.map((b) => b._id),
+      date: new Date(),
+    });
+
+    // تحديث كل الحجوزات الفعالة لـ completed
+    const result = await Booking.updateMany(
+      { vehicle: vehicle._id, status: "active" },
+      { $set: { status: "completed" } }
+    );
+
+    totalModified += result.modifiedCount;
+    tripsCreated += 1;
+
+    console.log(
+      `[RESET ] Vehicle ${vehicle._id} reset. Bookings completed: ${result.modifiedCount}`
+    );
+  }
 
   res.status(200).json({
     status: "success",
-    message: "Vehicle passengers reset and trip recorded successfully",
+    message: `Reset completed for ${vehicles.length} vehicles with plateNumber ${plateNumber}`,
     data: {
-      modifiedCount: result.modifiedCount,
-      tripRecorded: true,
+      vehiclesProcessed: vehicles.length,
+      tripsCreated,
+      bookingsModified: totalModified,
     },
   });
 });
 
 exports.getVichelActiveTrip = asyncHandler(async (req, res, next) => {
-  const { vichelId } = req.params;
+  const { vichelId, stationId } = req.params;
 
+  const stationData = await station.findById(stationId);
+  if (!stationData) {
+    return next(new Error("Station not found", 404));
+  }
+
+  if (stationData.admin.toString() !== req.currentUser._id.toString()) {
+    return next(Error("You are not authorized to delete a vehicle", 401));
+  }
   const vehicle = await VichelModel.findById(vichelId);
   if (!vehicle) {
-    return next(new appErrors.create("Vehicle not found", 404));
+    return next(new Error("Vehicle not found", 404));
   }
 
   // Find active bookings (Current Trip)
@@ -403,11 +448,20 @@ exports.getVichelActiveTrip = asyncHandler(async (req, res, next) => {
 });
 
 exports.getVehicleTrips = asyncHandler(async (req, res, next) => {
-  const { vichelId } = req.params;
+  const { vichelId, stationId } = req.params;
+
+  const stationData = await station.findById(stationId);
+  if (!stationData) {
+    return next(new Error("Station not found", 404));
+  }
+
+  if (stationData.admin.toString() !== req.currentUser._id.toString()) {
+    return next(Error("You are not authorized to delete a vehicle", 401));
+  }
 
   const vehicle = await VichelModel.findById(vichelId);
   if (!vehicle) {
-    return next(new appErrors.create("Vehicle not found", 404));
+    return next(new Error("Vehicle not found", 404));
   }
 
   // Aggregate trips grouped by Date (YYYY-MM-DD)
@@ -448,5 +502,62 @@ exports.getVehicleTrips = asyncHandler(async (req, res, next) => {
     status: "success",
     results: resultValues.length,
     data: resultValues,
+  });
+});
+
+exports.deleteVichel = asyncHandler(async (req, res, next) => {
+  const { stationId } = req.params;
+
+  const stationData = await station.findById(stationId);
+  if (!stationData) {
+    return next(new Error("Station not found", 404));
+  }
+
+  if (stationData.admin.toString() !== req.currentUser._id.toString()) {
+    return next(Error("You are not authorized to delete a vehicle", 401));
+  }
+
+  const vehicle = await VichelModel.deleteMany({
+    plateNumber: req.query.plateNumber,
+  });
+  if (!vehicle) {
+    return next(new Error("Vehicle not found", 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Vehicle deleted successfully",
+    data: vehicle,
+  });
+});
+
+exports.updateVichel = asyncHandler(async (req, res, next) => {
+  const { stationId } = req.params;
+
+  const stationData = await station.findById(stationId);
+  if (!stationData) {
+    return next(new Error("Station not found", 404));
+  }
+
+  if (stationData.admin.toString() !== req.currentUser._id.toString()) {
+    return next(
+      new Error("You are not authorized to update this vehicle", 403)
+    );
+  }
+
+  const vehicle = await VichelModel.updateMany(
+    { plateNumber: req.query.plateNumber },
+    req.body,
+    { new: true, runValidators: true }
+  );
+
+  if (!vehicle) {
+    return next(new Error(`${req.query.plateNumber} Vehicle not found `, 404));
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Vehicle updated successfully",
+    data: vehicle,
   });
 });

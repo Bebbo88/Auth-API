@@ -1,3 +1,4 @@
+const { object } = require("joi");
 const mongoose = require("mongoose");
 
 const StationSchema = new mongoose.Schema(
@@ -30,6 +31,11 @@ const StationSchema = new mongoose.Schema(
       type: String,
       enum: ["active", "issues"],
       default: "active",
+    },
+    admin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      unique: true,
     },
   },
   { timestamps: true }
