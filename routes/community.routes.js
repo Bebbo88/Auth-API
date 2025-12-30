@@ -11,6 +11,7 @@ const {
   getPostsByUserId,
   getPostLikers,
 } = require("../controller/community.controller");
+const { createReport } = require("../controller/report.controller");
 const VerifyToken = require("../middlewares/verifyToken");
 const upload = require("../middlewares/upload");
 const router = express.Router();
@@ -27,6 +28,9 @@ router.get("/posts/:id/likes", VerifyToken, getPostLikers);
 router.post("/posts/:id/comments", VerifyToken, addComment);
 router.put("/comments/:commentId", VerifyToken, updateComment);
 router.get("/posts/:id/comments", VerifyToken, getComments);
+
+// Reports
+router.post("/report", VerifyToken, createReport);
 
 // User activity
 router.get("/activity", VerifyToken, getActivity);

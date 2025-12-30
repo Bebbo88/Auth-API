@@ -75,6 +75,10 @@ const getPosts = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.category) filter.category = req.query.category;
 
+  // Filter for ACTIVE posts or legacy posts (undefined status)
+  // Exclude HIDDEN and DELETED
+  filter.status = { $nin: ['HIDDEN', 'DELETED'] };
+
   const totalCount = await Post.countDocuments(filter);
   const lastPage = Math.ceil(totalCount / limit);
 
@@ -146,7 +150,7 @@ const likePost = asyncHandler(async (req, res) => {
   const userId = req.currentUser._id;
 
   const post = await Post.findById(postId);
-  if (!post) {
+  if (!post || (post.status && post.status !== 'ACTIVE')) {
     res.status(404);
     throw new Error("Post not found");
   }
@@ -185,7 +189,7 @@ const addComment = asyncHandler(async (req, res) => {
   const postId = req.params.id;
 
   const post = await Post.findById(postId);
-  if (!post) {
+  if (!post || (post.status && post.status !== 'ACTIVE')) {
     res.status(404);
     throw new Error("Post not found");
   }
@@ -245,7 +249,10 @@ const updateComment = asyncHandler(async (req, res) => {
 
 // ======= Get Comments =======
 const getComments = asyncHandler(async (req, res) => {
-  const comments = await Comment.find({ post: req.params.id })
+  const comments = await Comment.find({
+    post: req.params.id,
+    status: { $nin: ['HIDDEN', 'DELETED'] }
+  })
     .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: 1 });
   res.json(comments);
@@ -267,10 +274,16 @@ const getPostsByUserId = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const skip = (page - 1) * limit;
 
-  const totalCount = await Post.countDocuments({ user: profileUserId });
+  const totalCount = await Post.countDocuments({
+    user: profileUserId,
+    status: { $nin: ['HIDDEN', 'DELETED'] }
+  });
   const lastPage = Math.ceil(totalCount / limit);
 
-  let posts = await Post.find({ user: profileUserId })
+  let posts = await Post.find({
+    user: profileUserId,
+    status: { $nin: ['HIDDEN', 'DELETED'] }
+  })
     .populate("user", "_id firstName lastName email avatar")
     .sort({ createdAt: -1 })
     .limit(limit)

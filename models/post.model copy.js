@@ -7,6 +7,15 @@ const postSchema = mongoose.Schema({
         enum: ['DISCUSSION', 'CAR_BOOKING', 'OPINION'],
         required: true
     },
+    status: {
+        type: String,
+        enum: ['ACTIVE', 'HIDDEN', 'DELETED'],
+        default: 'ACTIVE'
+    },
+    isPinned: {
+        type: Boolean,
+        default: false
+    },
     content: { type: String }, // Optional if media is present
     media: { type: String }, // Path to file
     mediaType: { type: String, enum: ['IMAGE', 'VIDEO', 'NONE'], default: 'NONE' },
