@@ -51,7 +51,7 @@ app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", usersRouter);
 app.use("/api/station", routeStation);
 app.use("/api/community", communityRoutes);
-app.use("/manager/community", managerCommunityRoutes);
+app.use("/api/manager/community", managerCommunityRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payment", paymentRoutes);
