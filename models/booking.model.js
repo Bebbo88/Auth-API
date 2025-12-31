@@ -9,7 +9,7 @@ const bookingSchema = new mongoose.Schema(
     },
     vehicle: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "vehicle", // اسم الموديل الجديد
+      ref: "Vehicle", // اسم الموديل الجديد
       required: [true, "Booking must belong to a vehicle"],
     },
     status: {
