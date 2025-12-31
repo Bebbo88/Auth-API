@@ -14,6 +14,7 @@ const {
   getUserDetails,
   getUserBookingHistory,
   updateProfile,
+  getAllUsers,
 } = require("../controller/users.controller");
 
 const rateLimit = require("express-rate-limit");
@@ -27,6 +28,7 @@ const loginLimiter = rateLimit({
 });
 
 router.route("/user/:userId").get(getUserDetails);
+router.route("/").get(VerifyToken, getAllUsers);
 router.route("/register").post(upload.single("avatar"), register);
 router.route("/login").post(loginLimiter, login);
 router.route("/logout").post(VerifyToken, logout);

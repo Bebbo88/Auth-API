@@ -218,6 +218,11 @@ exports.bookSeat = asyncHandler(async (req, res, next) => {
   if (!vehicle) {
     return next(Error("Vehicle not found", 404));
   }
+  if (vehicle.currentStatus !== "idle" && vehicle.currentStatus !== "loading") {
+    return next(
+      new Error("Vehicle is not available for booking right now", 400)
+    );
+  }
 
   // Count active bookings
   const activeBookingsCount = await Booking.countDocuments({

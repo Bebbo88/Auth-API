@@ -21,10 +21,15 @@ const VeichelSchema = mongoose.Schema({
     type: Boolean,
     default: false,
   },
+
   currentStatus: {
     type: String,
-    enum: ["idle", "onRoute", "maintenance"],
+    enum: ["idle", "loading", "onRoute", "maintenance"],
     default: "idle",
+  },
+  currentStation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Station",
   },
   line: {
     type: mongoose.Schema.Types.ObjectId,

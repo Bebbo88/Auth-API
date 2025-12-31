@@ -1,16 +1,17 @@
 const express = require("express");
 const {
-    getAllPosts,
-    hidePost,
-    deletePost,
-    togglePinPost,
-    getComments,
-    hideComment,
-    getReports,
-    resolveReport,
-    getStats,
-    getTopPosts,
-    getGlobalActivity
+  getAllPosts,
+  hidePost,
+  deletePost,
+  deleteAllDeletedPosts,
+  togglePinPost,
+  getComments,
+  hideComment,
+  getReports,
+  resolveReport,
+  getStats,
+  getTopPosts,
+  getGlobalActivity,
 } = require("../controller/community.manager.controller");
 
 const VerifyToken = require("../middlewares/verifyToken");
@@ -24,6 +25,7 @@ router.use(VerifyToken, allowedTo("MANAGER"));
 // Posts Management
 router.get("/posts", getAllPosts);
 router.patch("/posts/:id/hide", hidePost);
+router.delete("/posts/deleted", deleteAllDeletedPosts);
 router.delete("/posts/:id", deletePost);
 router.patch("/posts/:id/pin", togglePinPost);
 

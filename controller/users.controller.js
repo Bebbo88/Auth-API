@@ -8,6 +8,33 @@ const validator = require("validator");
 const transport = require("../middlewares/sendEmail");
 const hashing = require("../utils/hashing");
 
+const getAllUsers = asyncWrapper(async (req, res) => {
+  const query = req.query;
+  const limit = parseInt(query.limit) || 10;
+  const page = parseInt(query.page) || 1;
+  const skip = (page - 1) * limit;
+
+  const filter = {};
+  if (query.role) filter.role = query.role.toUpperCase();
+
+  const users = await User.find(filter)
+    .select("-password -__v") // Exclude sensitive data
+    .limit(limit)
+    .skip(skip);
+
+  const total = await User.countDocuments(filter);
+
+  res.json({
+    status: SUCCESS,
+    data: {
+      users,
+      total,
+      page,
+      limit,
+    },
+  });
+});
+
 const getUserDetails = asyncWrapper(async (req, res) => {
   const user = await User.findById(req.params.userId);
   if (!user) {
@@ -395,6 +422,7 @@ const updateProfile = asyncWrapper(async (req, res, next) => {
 
 module.exports = {
   getUserDetails,
+  getAllUsers,
   register,
   login,
   logout,
