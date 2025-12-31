@@ -128,6 +128,59 @@ exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
     results,
   });
 });
+exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
+  const { lineId } = req.params;
+
+  const vichels = await VichelModel.find({
+    lines: lineId,
+  })
+    .populate({
+      path: "lines",
+      match: { _id: lineId }, // عشان يجيب الخط المطلوب بس
+      select: "fromStation toStation",
+      populate: [
+        { path: "fromStation", select: "stationName" },
+        { path: "toStation", select: "stationName" },
+      ],
+    })
+    .populate({
+      path: "currentStation",
+      select: "stationName",
+    })
+    .lean();
+
+  const results = await Promise.all(
+    vichels.map(async (vehicle) => {
+      const bookings = await Booking.find({
+        vehicle: vehicle._id,
+        status: { $in: ["active", "pending"] },
+      }).populate("user", "firstName lastName email phoneNumber");
+
+      const activeBookingsCount = bookings.length;
+      const availableSeats = vehicle.capacity - activeBookingsCount;
+
+      return {
+        ...vehicle,
+
+        // 👇 نفس الـ response + currentStation
+        currentStation: vehicle.currentStation,
+
+        bookedUsers: bookings.map((b) => ({
+          ...b.user.toObject(),
+          bookingStatus: b.status,
+          bookingId: b._id,
+          bookedAt: b.createdAt,
+        })),
+        availableSeats,
+      };
+    })
+  );
+
+  res.status(200).json({
+    count: results.length,
+    results,
+  });
+});
 
 exports.getVichelOfLine = asyncHandler(async (req, res) => {
   const { vichelId } = req.params;
