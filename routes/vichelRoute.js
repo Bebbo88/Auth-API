@@ -34,6 +34,7 @@ route
   )
   .get(getVichelOfLineValidator, getAllVichelOfLine);
 route.route("/bulk").post(addBulkVichelsToLine);
+route.route("/admin").get(getAllVichels);
 
 route
   .route("/:vichelId")
@@ -41,8 +42,6 @@ route
 
   .delete(VerifyToken, allowedTo(userRoles.ADMIN), deleteVichel)
   .put(VerifyToken, allowedTo(userRoles.ADMIN), updateVichel);
-
-route.route("/admin").get(getAllVichels);
 
 route
   .route("/:vichelId/book")
