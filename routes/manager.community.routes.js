@@ -3,7 +3,6 @@ const {
   getAllPosts,
   hidePost,
   deletePost,
-  deleteAllDeletedPosts,
   togglePinPost,
   getComments,
   hideComment,
@@ -25,7 +24,7 @@ router.use(VerifyToken, allowedTo("MANAGER"));
 // Posts Management
 router.get("/posts", getAllPosts);
 router.patch("/posts/:id/hide", hidePost);
-router.delete("/posts/deleted", deleteAllDeletedPosts);
+// router.delete("/posts/deleted", deleteAllDeletedPosts);
 router.delete("/posts/:id", deletePost);
 router.patch("/posts/:id/pin", togglePinPost);
 
