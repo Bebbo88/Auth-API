@@ -1,39 +1,39 @@
 const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema(
-    {
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: [true, "Booking must belong to a user"],
-        },
-        vehicle: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Vichels",
-            required: [true, "Booking must belong to a vehicle"],
-        },
-        status: {
-            type: String,
-            enum: ["pending", "active", "cancelled", "completed"],
-            default: "pending",
-        },
-        expiresAt: {
-            type: Date,
-        },
-        price: {
-            type: Number,
-            default: 0,
-        },
-        seatNumber: {
-            type: String,
-        },
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Booking must belong to a user"],
     },
-    { timestamps: true }
+    vehicle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "vehicle", // اسم الموديل الجديد
+      required: [true, "Booking must belong to a vehicle"],
+    },
+    status: {
+      type: String,
+      enum: ["pending", "active", "cancelled", "completed"],
+      default: "pending",
+    },
+    expiresAt: {
+      type: Date,
+    },
+    price: {
+      type: Number,
+      default: 0,
+    },
+    seatNumber: {
+      type: String,
+    },
+  },
+  { timestamps: true }
 );
 
-
-// Prevent duplicate active bookings for same user on same vehicle
-// This replaces the .includes check we had before
-bookingSchema.index({ user: 1, vehicle: 1, status: 1 }, { unique: true, partialFilterExpression: { status: "active" } });
+bookingSchema.index(
+  { user: 1, vehicle: 1, status: 1 },
+  { unique: true, partialFilterExpression: { status: "active" } }
+);
 
 module.exports = mongoose.model("Booking", bookingSchema);
