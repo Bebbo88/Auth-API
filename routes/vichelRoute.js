@@ -11,6 +11,7 @@ const {
   confirmBooking,
   deleteVichel,
   updateVichel,
+  getAllVichels,
 } = require("../service/vichelService");
 const express = require("express");
 const {
@@ -37,8 +38,11 @@ route.route("/bulk").post(addBulkVichelsToLine);
 route
   .route("/:vichelId")
   .get(getVichelOfLine)
+
   .delete(VerifyToken, allowedTo(userRoles.ADMIN), deleteVichel)
   .put(VerifyToken, allowedTo(userRoles.ADMIN), updateVichel);
+
+route.route("/admin").get(getAllVichels);
 
 route
   .route("/:vichelId/book")

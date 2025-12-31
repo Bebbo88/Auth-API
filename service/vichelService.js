@@ -128,7 +128,7 @@ exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
     results,
   });
 });
-exports.getAllVichelOfLine = asyncHandler(async (req, res) => {
+exports.getAllVichels = asyncHandler(async (req, res) => {
   const { lineId } = req.params;
 
   const vichels = await VichelModel.find({
