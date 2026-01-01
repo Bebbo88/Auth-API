@@ -1,29 +1,26 @@
-// const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-// const postSchema = new mongoose.Schema(
-//   {
-//     title: {
-//       type: String,
-//       required: true,
-//       trim: true,
-//       minlength: 3,
-//       maxlength: 200,
-//     },
-//     description: {
-//       type: String,
-//       required: true,
-//       trim: true,
-//       minlength: 10,
-//     },
-//     userId: {
-//       type: mongoose.Schema.Types.ObjectId,
-//       ref: "User",
-//       required: true,
-//     },
-//   },
-//   {
-//     timestamps: true,
-//   }
-// );
+const postSchema = mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    category: {
+        type: String,
+        enum: ['DISCUSSION', 'CAR_BOOKING', 'OPINION'],
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['ACTIVE', 'HIDDEN', 'DELETED'],
+        default: 'ACTIVE'
+    },
+    isPinned: {
+        type: Boolean,
+        default: false
+    },
+    content: { type: String }, // Optional if media is present
+    media: { type: String }, // Path to file
+    mediaType: { type: String, enum: ['IMAGE', 'VIDEO', 'NONE'], default: 'NONE' },
+    likesCount: { type: Number, default: 0 },
+    commentsCount: { type: Number, default: 0 },
+}, { timestamps: true });
 
-// module.exports = mongoose.model("Post", postSchema);
+module.exports = mongoose.model('Post', postSchema);

@@ -7,6 +7,7 @@ const {
   addAdminToStation,
   deleteStation,
   updateStation,
+  getStationStats,
 } = require("../service/StationsServices");
 const express = require("express");
 const {
@@ -42,5 +43,9 @@ route
   .get(getOneStationValidator, getOneStation)
   .delete(VerifyToken, allowedTo(userRoles.MANAGER), deleteStation)
   .put(VerifyToken, allowedTo(userRoles.ADMIN), updateStation);
+
+route
+  .route("/:stationId/stats")
+  .get(VerifyToken, allowedTo(userRoles.ADMIN), getStationStats);
 
 module.exports = route;

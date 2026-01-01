@@ -222,53 +222,53 @@ exports.getOneLine = asyncHandler(async (req, res, next) => {
 exports.deleteLineBetweenStations = asyncHandler(async (req, res, next) => {
   const session = await mongoose.startSession();
 
-try {
-  await session.withTransaction(async () => {
-    const { stationId } = req.params;
-    const { toStation } = req.query;
+  try {
+    await session.withTransaction(async () => {
+      const { stationId } = req.params;
+      const { toStation } = req.query;
 
-    if (!toStation) throw new appErrors.create("toStation is required", 400);
-    if (stationId === toStation)
-      throw new appErrors.create("Origin and destination stations must be different", 400);
+      if (!toStation) throw new appErrors.create("toStation is required", 400);
+      if (stationId === toStation)
+        throw new appErrors.create("Origin and destination stations must be different", 400);
 
-    const [from, to] = await Promise.all([
-      Station.findById(stationId).session(session),
-      Station.findById(toStation).session(session),
-    ]);
+      const [from, to] = await Promise.all([
+        Station.findById(stationId).session(session),
+        Station.findById(toStation).session(session),
+      ]);
 
-    if (!from || !to) throw new appErrors.create("One or both stations not found", 404);
-    if (from.admin.toString() !== req.currentUser._id.toString())
-      throw new appErrors.create("Not authorized", 401);
+      if (!from || !to) throw new appErrors.create("One or both stations not found", 404);
+      if (from.admin.toString() !== req.currentUser._id.toString())
+        throw new appErrors.create("Not authorized", 401);
 
-    const lines = await Line.find({
-      $or: [
-        { fromStation: stationId, toStation },
-        { fromStation: toStation, toStation: stationId },
-      ],
-    }).session(session);
+      const lines = await Line.find({
+        $or: [
+          { fromStation: stationId, toStation },
+          { fromStation: toStation, toStation: stationId },
+        ],
+      }).session(session);
 
-    if (!lines.length) throw new appErrors.create("Line not found", 404);
+      if (!lines.length) throw new appErrors.create("Line not found", 404);
 
-    const lineIds = lines.map((l) => l._id);
+      const lineIds = lines.map((l) => l._id);
 
-    await Line.deleteMany({ _id: { $in: lineIds } }).session(session);
+      await Line.deleteMany({ _id: { $in: lineIds } }).session(session);
 
-    from.lines = from.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
-    to.lines = to.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
+      from.lines = from.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
+      to.lines = to.lines.filter((id) => !lineIds.some((l) => l.equals(id)));
 
-    await Promise.all([from.save({ session }), to.save({ session })]);
+      await Promise.all([from.save({ session }), to.save({ session })]);
 
-    res.status(200).json({
-      status: "success",
-      message: "Line deleted successfully (both directions)",
-      deletedLines: lineIds,
+      res.status(200).json({
+        status: "success",
+        message: "Line deleted successfully (both directions)",
+        deletedLines: lineIds,
+      });
     });
-  });
-} catch (error) {
-  next(error);
-} finally {
-  session.endSession();
-}
+  } catch (error) {
+    next(error);
+  } finally {
+    session.endSession();
+  }
 });
 
 exports.updateLineBetweenStations = asyncHandler(async (req, res, next) => {

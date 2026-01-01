@@ -503,7 +503,12 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
 
   const activeBookings = await Booking.find({
     vehicle: vehicle._id,
-    status: { $in: ["active", "pending"] },
+    status: "active",
+  });
+
+  const pendingBookings = await Booking.find({
+    vehicle: vehicle._id,
+    status: "pending",
   });
 
   let tripsCreated = 0;
@@ -520,13 +525,24 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
     const result = await Booking.updateMany(
       {
         vehicle: vehicle._id,
-        status: { $in: ["active", "pending"] },
+        status: "active",
       },
       { $set: { status: "completed" } }
     );
 
     tripsCreated += 1;
     bookingsModified += result.modifiedCount;
+  }
+
+  // Cancel any pending bookings that didn't confirm before the trip started
+  if (pendingBookings.length > 0) {
+    await Booking.updateMany(
+      {
+        vehicle: vehicle._id,
+        status: "pending",
+      },
+      { $set: { status: "cancelled" } }
+    );
   }
 
   // Create trip even if empty? User said "write down in the trips".
@@ -547,7 +563,7 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
   // However, the selectedLineId in frontend is passed.
   // Let's assume the Line direction defines the movement.
 
-  vehicle.currentStation = line.toStation;
+  vehicle.currentStation = stationId;
   vehicle.currentStatus = "idle"; // Reset status to available/idle
 
   await vehicle.save();
@@ -559,7 +575,7 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
       vehicleId: vehicle._id,
       tripsCreated,
       bookingsModified,
-      currentStation: line.toStation,
+      currentStation: stationId,
       currentStatus: "idle",
     },
   });

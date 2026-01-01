@@ -8,7 +8,8 @@ const reportSchema = new mongoose.Schema({
     },
     targetId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        required: true,
+        refPath: 'targetModel'
     },
     targetModel: {
         type: String,

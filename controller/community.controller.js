@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const Post = require("../models/post.model copy");
+const Post = require("../models/post.model");
 const Comment = require("../models/comment.model");
 const Like = require("../models/like.model");
 const Activity = require("../models/activity.model");

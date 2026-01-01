@@ -1,5 +1,5 @@
 const asyncHandler = require("express-async-handler");
-const Post = require("../models/post.model copy");
+const Post = require("../models/post.model");
 const Comment = require("../models/comment.model");
 const Report = require("../models/report.model");
 const Activity = require("../models/activity.model");
@@ -66,6 +66,20 @@ const hidePost = asyncHandler(async (req, res) => {
   res.json(post);
 });
 
+// ======= Activate/Restore Post =======
+const activatePost = asyncHandler(async (req, res) => {
+  const post = await Post.findByIdAndUpdate(
+    req.params.id,
+    { status: "ACTIVE" },
+    { new: true }
+  );
+  if (!post) {
+    res.status(404);
+    throw new Error("Post not found");
+  }
+  res.json(post);
+});
+
 // ======= Delete Post (Soft Delete) =======
 const deletePost = asyncHandler(async (req, res) => {
   const post = await Post.findByIdAndUpdate(
@@ -78,6 +92,15 @@ const deletePost = asyncHandler(async (req, res) => {
     throw new Error("Post not found");
   }
   res.json(post);
+});
+
+// ======= Hard Delete All Soft-Deleted Posts =======
+const deleteAllDeletedPosts = asyncHandler(async (req, res) => {
+  const result = await Post.deleteMany({ status: "DELETED" });
+  res.json({
+    message: `تم حذف ${result.deletedCount} منشور نهائياً`,
+    deletedCount: result.deletedCount,
+  });
 });
 
 // ======= Pin/Unpin Post =======
@@ -114,6 +137,34 @@ const hideComment = asyncHandler(async (req, res) => {
   res.json(comment);
 });
 
+// ======= Activate/Restore Comment =======
+const activateComment = asyncHandler(async (req, res) => {
+  const comment = await Comment.findByIdAndUpdate(
+    req.params.commentId,
+    { status: "ACTIVE" },
+    { new: true }
+  );
+  if (!comment) {
+    res.status(404);
+    throw new Error("Comment not found");
+  }
+  res.json(comment);
+});
+
+// ======= Delete Comment (Soft Delete) =======
+const deleteComment = asyncHandler(async (req, res) => {
+  const comment = await Comment.findByIdAndUpdate(
+    req.params.commentId,
+    { status: "DELETED" },
+    { new: true }
+  );
+  if (!comment) {
+    res.status(404);
+    throw new Error("Comment not found");
+  }
+  res.json(comment);
+});
+
 // ======= Get Reports =======
 const getReports = asyncHandler(async (req, res) => {
   const filter = {};
@@ -130,6 +181,7 @@ const getReports = asyncHandler(async (req, res) => {
 
   const reports = await Report.find(filter)
     .populate("user", "firstName lastName email")
+    .populate("targetId")
     .sort({ createdAt: -1 });
 
   res.json(reports);
@@ -249,10 +301,14 @@ const getGlobalActivity = asyncHandler(async (req, res) => {
 module.exports = {
   getAllPosts,
   hidePost,
+  activatePost,
   deletePost,
+  deleteAllDeletedPosts,
   togglePinPost,
   getComments,
+  activateComment,
   hideComment,
+  deleteComment,
   getReports,
   resolveReport,
   getStats,

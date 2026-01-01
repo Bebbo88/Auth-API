@@ -2,6 +2,9 @@ const station = require("../models/StationModel");
 const asyncHandler = require("express-async-handler");
 const User = require("../models/user.model");
 const Line = require("../models/LinesModel");
+const Vehicle = require("../models/vichelModel");
+const Booking = require("../models/booking.model");
+const Trip = require("../models/trip.model");
 
 // ➕ Add Station
 // ➕ Add Stations (Bulk)
@@ -225,4 +228,51 @@ exports.updateStation = asyncHandler(async (req, res) => {
   });
 
   res.status(200).json({ data: updatedStation });
+});
+
+exports.getStationStats = asyncHandler(async (req, res, next) => {
+  const { stationId } = req.params;
+
+  // 1. Active Vehicles: Count vehicles currently at this station
+  const activeVehicles = await Vehicle.countDocuments({
+    currentStation: stationId,
+  });
+
+  // 2. Today's Passengers: Sum passengerCount from trips recorded today for vehicles at this station
+  // We first find all vehicles that belong to this station (have this station in their lines)
+  // or simply vehicles that have this station as currentStation? 
+  // User asked for "today's passengers" for the station.
+  // Best way: find all trips for vehicles that are currently associated with this station's lines.
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Find all lines of this station to get associated vehicles
+  const stationLines = await Line.find({ fromStation: stationId }).select("_id");
+  const lineIds = stationLines.map(l => l._id);
+
+  // Find vehicles on these lines
+  const vehicles = await Vehicle.find({ lines: { $in: lineIds } }).select("_id");
+  const vehicleIds = vehicles.map(v => v._id);
+
+  // Aggregate trip passengers for today
+  const tripsToday = await Trip.find({
+    vehicle: { $in: vehicleIds },
+    date: { $gte: startOfDay, $lte: endOfDay }
+  });
+
+  const todayPassengers = tripsToday.reduce((sum, trip) => sum + trip.passengerCount, 0);
+  const todayTrips = tripsToday.length;
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      activeVehicles,
+      todayPassengers,
+      todayTrips,
+    },
+  });
 });
