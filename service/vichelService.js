@@ -473,7 +473,7 @@ exports.cancelBooking = asyncHandler(async (req, res, next) => {
 const Trip = require("../models/trip.model"); // Ensure import at top
 
 exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
-  const { stationId, vichelId } = req.params;
+  const { stationId, vichelId, lineId } = req.params;
 
   const stationData = await station.findById(stationId);
   if (!stationData) {
@@ -493,6 +493,12 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
   const vehicle = await VichelModel.findById(vichelId);
   if (!vehicle) {
     return next(new Error("Vehicle not found", 404));
+  }
+
+  // Find the line to determine the destination
+  const line = await Line.findById(lineId);
+  if (!line) {
+    return next(new Error("Line not found", 404));
   }
 
   const activeBookings = await Booking.find({
@@ -523,7 +529,27 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
     bookingsModified += result.modifiedCount;
   }
 
-  vehicle.currentStation = stationId;
+  // Create trip even if empty? User said "write down in the trips".
+  // If activeBookings is 0, maybe we should still record the trip?
+  // Current logic only creates trip if there are bookings.
+  // I will leave it as is unless "trip" implies movement regardless of passengers.
+  // But usually empty runs might not be "Trips" in this system context or might be.
+  // For now I'll stick to modifying the movement logic.
+
+  // Determine destination station:
+  // If we assume lineId is the line being traversed.
+  // Usually the vehicle is at `fromStation` (or was).
+  // Ideally, if currentStation is line.fromStation, go to line.toStation.
+  // If currentStation is line.toStation, go to line.fromStation.
+  // But reliable way is just use line.toStation if we consider "Line" as directional A->B.
+  // If the admin selected the line A->B, and clicked reset, imply it arrived at B.
+
+  // However, the selectedLineId in frontend is passed.
+  // Let's assume the Line direction defines the movement.
+
+  vehicle.currentStation = line.toStation;
+  vehicle.currentStatus = "idle"; // Reset status to available/idle
+
   await vehicle.save();
 
   res.status(200).json({
@@ -533,7 +559,8 @@ exports.resetVichelBookings = asyncHandler(async (req, res, next) => {
       vehicleId: vehicle._id,
       tripsCreated,
       bookingsModified,
-      currentStation: stationId,
+      currentStation: line.toStation,
+      currentStatus: "idle",
     },
   });
 });
