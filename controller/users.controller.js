@@ -454,6 +454,7 @@ async function getUserBookingHistory(req, res, next) {
           { path: "toStation", select: "stationName" },
         ],
       },
+      strictPopulate: false,
     })
     .sort({ createdAt: -1 });
 

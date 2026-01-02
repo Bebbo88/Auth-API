@@ -240,7 +240,7 @@ exports.getStationStats = asyncHandler(async (req, res, next) => {
 
   // 2. Today's Passengers: Sum passengerCount from trips recorded today for vehicles at this station
   // We first find all vehicles that belong to this station (have this station in their lines)
-  // or simply vehicles that have this station as currentStation? 
+  // or simply vehicles that have this station as currentStation?
   // User asked for "today's passengers" for the station.
   // Best way: find all trips for vehicles that are currently associated with this station's lines.
 
@@ -251,20 +251,27 @@ exports.getStationStats = asyncHandler(async (req, res, next) => {
   endOfDay.setHours(23, 59, 59, 999);
 
   // Find all lines of this station to get associated vehicles
-  const stationLines = await Line.find({ fromStation: stationId }).select("_id");
-  const lineIds = stationLines.map(l => l._id);
+  const stationLines = await Line.find({ fromStation: stationId }).select(
+    "_id"
+  );
+  const lineIds = stationLines.map((l) => l._id);
 
   // Find vehicles on these lines
-  const vehicles = await Vehicle.find({ lines: { $in: lineIds } }).select("_id");
-  const vehicleIds = vehicles.map(v => v._id);
+  const vehicles = await Vehicle.find({ lines: { $in: lineIds } }).select(
+    "_id"
+  );
+  const vehicleIds = vehicles.map((v) => v._id);
 
   // Aggregate trip passengers for today
   const tripsToday = await Trip.find({
     vehicle: { $in: vehicleIds },
-    date: { $gte: startOfDay, $lte: endOfDay }
+    date: { $gte: startOfDay, $lte: endOfDay },
   });
 
-  const todayPassengers = tripsToday.reduce((sum, trip) => sum + trip.passengerCount, 0);
+  const todayPassengers = tripsToday.reduce(
+    (sum, trip) => sum + trip.passengerCount,
+    0
+  );
   const todayTrips = tripsToday.length;
 
   res.status(200).json({
