@@ -447,7 +447,7 @@ async function getUserBookingHistory(req, res, next) {
       path: "vehicle",
       select: "plateNumber model line",
       populate: {
-        path: "line",
+        path: "lines",
         select: "fromStation toStation",
         populate: [
           { path: "fromStation", select: "stationName" },
