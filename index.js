@@ -23,7 +23,10 @@ const Booking = require("./models/booking.model");
 ================================ */
 app.use(
   cors({
-    origin: true,
+    origin: [
+      "http://localhost:5173",
+      "https://iti-final-project-pi.vercel.app",
+    ],
     credentials: true,
   })
 );
